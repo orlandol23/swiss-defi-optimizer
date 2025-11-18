@@ -1,0 +1,51 @@
+{
+  "name": "swiss-defi-optimizer",
+  "version": "1.0.0",
+  "description": "DeFi Yield Optimizer with Swiss FINMA Compliance",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:unit": "hardhat test test/unit/**/*.test.ts",
+    "test:integration": "hardhat test test/integration/**/*.test.ts",
+    "test:security": "hardhat test test/security/**/*.test.ts",
+    "coverage": "hardhat coverage",
+    "gas-report": "REPORT_GAS=true hardhat test",
+    "node": "hardhat node",
+    "deploy:localhost": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "verify:sepolia": "hardhat run scripts/verify.ts --network sepolia",
+    "clean": "hardhat clean",
+    "size": "hardhat size-contracts",
+    "typechain": "hardhat typechain"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:27967/git/orlandol23/swiss-defi-optimizer"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.1.2",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.10.1",
+    "hardhat": "^2.27.0",
+    "hardhat-contract-sizer": "^2.10.1",
+    "hardhat-gas-reporter": "^2.3.0",
+    "solc": "^0.8.20",
+    "solidity-coverage": "^0.8.16",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.5.0",
+    "@openzeppelin/contracts": "^4.9.6",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0"
+  }
+}
