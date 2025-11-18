@@ -1,0 +1,84 @@
+name: Deploy to Testnet
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network to deploy to'
+        required: true
+        default: 'sepolia'
+        type: choice
+        options:
+          - sepolia
+          - localhost
+      verify:
+        description: 'Verify contracts on Etherscan'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.network }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.network }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Compile contracts
+      run: npm run compile
+
+    - name: Run tests before deployment
+      run: npm test
+      env:
+        REPORT_GAS: false
+
+    - name: Deploy to ${{ github.event.inputs.network }}
+      run: npm run deploy:${{ github.event.inputs.network }}
+      env:
+        PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+        SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+        ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+
+    - name: Verify contracts
+      if: ${{ github.event.inputs.verify == 'true' && github.event.inputs.network != 'localhost' }}
+      run: npm run verify:${{ github.event.inputs.network }}
+      env:
+        ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+      continue-on-error: true
+
+    - name: Upload deployment artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-${{ github.event.inputs.network }}
+        path: |
+          deployments/
+          artifacts/
+          typechain-types/
+
+    - name: Create deployment summary
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Network:** ${{ github.event.inputs.network }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Verification:** ${{ github.event.inputs.verify }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ -f "deployments/${{ github.event.inputs.network }}.json" ]; then
+          echo "### Deployed Contracts" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat deployments/${{ github.event.inputs.network }}.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
