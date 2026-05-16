@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "../interfaces/IStrategy.sol";
 
 /**
  * @title Vault
@@ -96,7 +97,7 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
         IERC20 asset_,
         string memory name_,
         string memory symbol_
-    ) ERC4626(asset_) ERC20(name_, symbol_) Ownable(msg.sender) {
+    ) ERC4626(asset_) ERC20(name_, symbol_) {
         if (address(asset_) == address(0)) revert ZeroAddress();
 
         // Set reasonable defaults
@@ -265,8 +266,12 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
         if (amount == 0) return;
         if (amount > totalAllocated) revert InsufficientBalance();
 
-        // For now, we assume strategy has a withdraw function
-        // In production, this would call the actual strategy contract
+        uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
+        IStrategy(strategy).withdraw(amount);
+        uint256 received = IERC20(asset()).balanceOf(address(this)) - balanceBefore;
+
+        if (received < amount) revert InsufficientBalance();
+
         totalAllocated -= amount;
 
         emit AssetsWithdrawn(amount, totalAllocated);

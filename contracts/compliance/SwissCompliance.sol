@@ -87,7 +87,7 @@ contract SwissCompliance is Ownable {
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address chfUsdFeed_) Ownable(msg.sender) {
+    constructor(address chfUsdFeed_) {
         if (chfUsdFeed_ == address(0)) revert ZeroAddress();
         chfUsdFeed = chfUsdFeed_;
     }
