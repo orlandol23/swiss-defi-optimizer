@@ -35,7 +35,6 @@ import "../libraries/PriceConverter.sol";
  * for actual compliance. Regulations vary by canton.
  */
 contract SwissCompliance is Ownable {
-    using PriceConverter for address;
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -87,7 +86,7 @@ contract SwissCompliance is Ownable {
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address chfUsdFeed_) {
+    constructor(address chfUsdFeed_) Ownable(msg.sender) {
         if (chfUsdFeed_ == address(0)) revert ZeroAddress();
         chfUsdFeed = chfUsdFeed_;
     }
@@ -303,7 +302,7 @@ contract SwissCompliance is Ownable {
         uint256 amountUsd18 = amountUsd * 1e12;
 
         // Convert using Chainlink
-        amountChf = chfUsdFeed.convertUsdToChf(amountUsd18);
+        amountChf = PriceConverter.convertUsdToChf(amountUsd18, chfUsdFeed);
     }
 
     /**

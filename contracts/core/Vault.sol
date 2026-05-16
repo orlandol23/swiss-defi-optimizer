@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../interfaces/IStrategy.sol";
 
 /**
@@ -97,7 +97,7 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
         IERC20 asset_,
         string memory name_,
         string memory symbol_
-    ) ERC4626(asset_) ERC20(name_, symbol_) {
+    ) ERC4626(asset_) ERC20(name_, symbol_) Ownable(msg.sender) {
         if (address(asset_) == address(0)) revert ZeroAddress();
 
         // Set reasonable defaults
