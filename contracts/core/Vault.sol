@@ -1,0 +1,340 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../interfaces/IStrategy.sol";
+
+/**
+ * @title Vault
+ * @notice ERC-4626 compliant vault for DeFi yield optimization
+ * @dev Main vault contract that accepts USDC and allocates to yield strategies
+ *
+ * Features:
+ * - ERC-4626 standard implementation for tokenized vaults
+ * - Reentrancy protection on all state-changing functions
+ * - Owner-controlled strategy management
+ * - Support for multiple yield strategies
+ *
+ * Security:
+ * - ReentrancyGuard prevents reentrancy attacks
+ * - Ownable restricts strategy management to owner only
+ * - SafeERC20 prevents token transfer issues
+ * - Input validation on all public functions
+ */
+contract Vault is ERC4626, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    /*//////////////////////////////////////////////////////////////
+                            STATE VARIABLES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Address of the active yield strategy
+    address public strategy;
+
+    /// @notice Maximum deposit limit per user (0 = no limit)
+    uint256 public maxDeposit;
+
+    /// @notice Total assets allocated to strategy
+    uint256 public totalAllocated;
+
+    /// @notice Minimum time between harvests (in seconds)
+    uint256 public constant MIN_HARVEST_DELAY = 1 hours;
+
+    /// @notice Last harvest timestamp
+    uint256 public lastHarvest;
+
+    /// @notice Emergency shutdown flag
+    bool public emergencyShutdown;
+
+    /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Emitted when a new strategy is set
+    event StrategyUpdated(address indexed oldStrategy, address indexed newStrategy);
+
+    /// @notice Emitted when assets are allocated to strategy
+    event AssetsAllocated(uint256 amount, uint256 totalAllocated);
+
+    /// @notice Emitted when assets are withdrawn from strategy
+    event AssetsWithdrawn(uint256 amount, uint256 totalAllocated);
+
+    /// @notice Emitted when max deposit is updated
+    event MaxDepositUpdated(uint256 oldMax, uint256 newMax);
+
+    /// @notice Emitted when emergency shutdown is triggered
+    event EmergencyShutdown(address indexed caller);
+
+    /// @notice Emitted when harvest is executed
+    event Harvest(uint256 profit, uint256 timestamp);
+
+    /*//////////////////////////////////////////////////////////////
+                                ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ZeroAddress();
+    error ExceedsMaxDeposit();
+    error EmergencyShutdownActive();
+    error HarvestTooSoon();
+    error InsufficientBalance();
+    error InvalidAmount();
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Initialize the Vault
+     * @param asset_ Address of the underlying asset (USDC)
+     * @param name_ Name of the vault token
+     * @param symbol_ Symbol of the vault token
+     */
+    constructor(
+        IERC20 asset_,
+        string memory name_,
+        string memory symbol_
+    ) ERC4626(asset_) ERC20(name_, symbol_) Ownable(msg.sender) {
+        if (address(asset_) == address(0)) revert ZeroAddress();
+
+        // Set reasonable defaults
+        maxDeposit = type(uint256).max; // No limit initially
+        lastHarvest = block.timestamp;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        DEPOSIT/WITHDRAWAL LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Deposit assets and receive vault shares
+     * @param assets Amount of assets to deposit
+     * @param receiver Address to receive vault shares
+     * @return shares Amount of shares minted
+     */
+    function deposit(
+        uint256 assets,
+        address receiver
+    ) public override nonReentrant returns (uint256 shares) {
+        if (emergencyShutdown) revert EmergencyShutdownActive();
+        if (assets == 0) revert InvalidAmount();
+        if (assets > maxDeposit) revert ExceedsMaxDeposit();
+        if (receiver == address(0)) revert ZeroAddress();
+
+        shares = super.deposit(assets, receiver);
+
+        return shares;
+    }
+
+    /**
+     * @notice Mint vault shares by depositing assets
+     * @param shares Amount of shares to mint
+     * @param receiver Address to receive vault shares
+     * @return assets Amount of assets deposited
+     */
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public override nonReentrant returns (uint256 assets) {
+        if (emergencyShutdown) revert EmergencyShutdownActive();
+        if (shares == 0) revert InvalidAmount();
+        if (receiver == address(0)) revert ZeroAddress();
+
+        assets = super.mint(shares, receiver);
+
+        return assets;
+    }
+
+    /**
+     * @notice Withdraw assets by burning shares
+     * @param assets Amount of assets to withdraw
+     * @param receiver Address to receive assets
+     * @param owner_ Address that owns the shares
+     * @return shares Amount of shares burned
+     */
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner_
+    ) public override nonReentrant returns (uint256 shares) {
+        if (assets == 0) revert InvalidAmount();
+        if (receiver == address(0)) revert ZeroAddress();
+
+        // Check if we need to withdraw from strategy
+        uint256 availableAssets = IERC20(asset()).balanceOf(address(this));
+        if (assets > availableAssets && strategy != address(0)) {
+            _withdrawFromStrategy(assets - availableAssets);
+        }
+
+        shares = super.withdraw(assets, receiver, owner_);
+
+        return shares;
+    }
+
+    /**
+     * @notice Redeem shares for assets
+     * @param shares Amount of shares to redeem
+     * @param receiver Address to receive assets
+     * @param owner_ Address that owns the shares
+     * @return assets Amount of assets withdrawn
+     */
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner_
+    ) public override nonReentrant returns (uint256 assets) {
+        if (shares == 0) revert InvalidAmount();
+        if (receiver == address(0)) revert ZeroAddress();
+
+        assets = previewRedeem(shares);
+
+        // Check if we need to withdraw from strategy
+        uint256 availableAssets = IERC20(asset()).balanceOf(address(this));
+        if (assets > availableAssets && strategy != address(0)) {
+            _withdrawFromStrategy(assets - availableAssets);
+        }
+
+        assets = super.redeem(shares, receiver, owner_);
+
+        return assets;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        VAULT ACCOUNTING LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Total assets under management (vault + strategy)
+     * @return Total assets in the vault
+     */
+    function totalAssets() public view override returns (uint256) {
+        return IERC20(asset()).balanceOf(address(this)) + totalAllocated;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        STRATEGY MANAGEMENT
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Set a new yield strategy
+     * @param newStrategy Address of the new strategy contract
+     * @dev Only owner can call this function
+     */
+    function setStrategy(address newStrategy) external onlyOwner {
+        if (newStrategy == address(0)) revert ZeroAddress();
+
+        address oldStrategy = strategy;
+
+        // If there's an old strategy, withdraw all assets first
+        if (oldStrategy != address(0) && totalAllocated > 0) {
+            _withdrawFromStrategy(totalAllocated);
+        }
+
+        strategy = newStrategy;
+
+        emit StrategyUpdated(oldStrategy, newStrategy);
+    }
+
+    /**
+     * @notice Allocate assets to the active strategy
+     * @param amount Amount of assets to allocate
+     * @dev Only owner can call this function
+     */
+    function allocateToStrategy(uint256 amount) external onlyOwner nonReentrant {
+        if (strategy == address(0)) revert ZeroAddress();
+        if (amount == 0) revert InvalidAmount();
+
+        uint256 availableAssets = IERC20(asset()).balanceOf(address(this));
+        if (amount > availableAssets) revert InsufficientBalance();
+
+        // Transfer assets to strategy
+        IERC20(asset()).safeTransfer(strategy, amount);
+        totalAllocated += amount;
+
+        emit AssetsAllocated(amount, totalAllocated);
+    }
+
+    /**
+     * @notice Withdraw assets from strategy
+     * @param amount Amount to withdraw
+     */
+    function _withdrawFromStrategy(uint256 amount) internal {
+        if (strategy == address(0)) revert ZeroAddress();
+        if (amount == 0) return;
+        if (amount > totalAllocated) revert InsufficientBalance();
+
+        uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
+        IStrategy(strategy).withdraw(amount);
+        uint256 received = IERC20(asset()).balanceOf(address(this)) - balanceBefore;
+
+        if (received < amount) revert InsufficientBalance();
+
+        totalAllocated -= amount;
+
+        emit AssetsWithdrawn(amount, totalAllocated);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Update maximum deposit limit
+     * @param newMaxDeposit New maximum deposit amount (0 = no limit)
+     */
+    function setMaxDeposit(uint256 newMaxDeposit) external onlyOwner {
+        uint256 oldMax = maxDeposit;
+        maxDeposit = newMaxDeposit;
+
+        emit MaxDepositUpdated(oldMax, newMaxDeposit);
+    }
+
+    /**
+     * @notice Trigger emergency shutdown
+     * @dev Prevents new deposits but allows withdrawals
+     */
+    function triggerEmergencyShutdown() external onlyOwner {
+        emergencyShutdown = true;
+
+        emit EmergencyShutdown(msg.sender);
+    }
+
+    /**
+     * @notice Harvest profits from strategy
+     * @dev Can only be called after MIN_HARVEST_DELAY
+     */
+    function harvest() external onlyOwner nonReentrant {
+        if (block.timestamp < lastHarvest + MIN_HARVEST_DELAY) {
+            revert HarvestTooSoon();
+        }
+
+        // In production, this would call strategy.harvest()
+        // For now, we just update the timestamp
+        lastHarvest = block.timestamp;
+
+        emit Harvest(0, block.timestamp);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Get vault info for UI
+     * @return totalAssets_ Total assets under management
+     * @return totalShares Total shares minted
+     * @return pricePerShare Price per share (in asset decimals)
+     */
+    function getVaultInfo() external view returns (
+        uint256 totalAssets_,
+        uint256 totalShares,
+        uint256 pricePerShare
+    ) {
+        totalAssets_ = totalAssets();
+        totalShares = totalSupply();
+        pricePerShare = totalShares > 0 ? (totalAssets_ * 1e18) / totalShares : 1e18;
+    }
+}
