@@ -1,6 +1,6 @@
 # Swiss DeFi Yield Optimizer 🇨🇭
 
-> Professional Full Stack Web3 DeFi project with Swiss FINMA compliance
+> Cofre DeFi (ERC-4626) em Solidity com um módulo de *compliance* inspirado nas regras suíças e conversão de moeda via oráculos Chainlink. **Projeto de smart contracts** (Hardhat + TypeScript) — não há frontend.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-blue)](https://soliditylang.org/)
@@ -8,230 +8,145 @@
 
 ## Overview
 
-The **Swiss DeFi Yield Optimizer** is a production-ready DeFi vault system that demonstrates expertise in:
+Vault tokenizado **ERC-4626** que aceita USDC e pode alocar fundos em uma estratégia externa
+(via interface `IStrategy`), acompanhado de um módulo de compliance e conversão de preço.
+O foco do projeto é o **código dos contratos e seus testes**, como peça de estudo de DeFi/Solidity.
 
-- ✅ **Smart Contracts**: ERC-4626 compliant vault with advanced security
-- ✅ **Web3 Integration**: ethers.js v6, wagmi, Next.js 13+
-- ✅ **DeFi Protocols**: Integration ready for Aave, Compound, Curve
-- ✅ **Oracle Integration**: Chainlink Price Feeds for CHF/USD conversion
-- ✅ **Regulatory Compliance**: Swiss FINMA-compliant tax reporting
-- ✅ **Security**: Reentrancy protection, access control, comprehensive testing
+- **Smart contracts:** vault ERC-4626 com `ReentrancyGuard`, `Ownable` e `SafeERC20`.
+- **Oráculos:** Chainlink Price Feeds para conversão CHF/USD.
+- **Compliance:** módulo *mock* que simula tributação suíça (renda/patrimônio) e checagem KYC/AML.
+- **Tooling:** Hardhat + TypeScript + TypeChain + ethers v6 (apenas em scripts e testes).
 
-## Features
+> ⚠️ Escopo: este repositório contém **apenas os contratos**. Não há frontend, integração com
+> carteira nem integração com protocolos externos (Aave/Compound/Curve) — ver "Possível trabalho futuro".
 
-### Smart Contracts
+## Contratos
 
-- **Vault.sol**: ERC-4626 tokenized vault accepting USDC
-- **SwissCompliance.sol**: Mock compliance module for Swiss tax regulations
-- **PriceConverter.sol**: Chainlink oracle integration for multi-currency support
-- **Strategy Management**: Modular strategy system for yield optimization
-
-### Compliance
-
-- **Income Tax**: DeFi yield taxed as ordinary income (0-40%)
-- **Wealth Tax**: Crypto holdings included (0.1-1%)
-- **Reporting**: Multi-currency CHF/USD conversion
-- **KYC/AML**: Simulated compliance checking
+- **`Vault.sol`** — vault ERC-4626 sobre USDC, com gestão de estratégia e *emergency shutdown*.
+- **`SwissCompliance.sol`** — módulo *mock* de regras tributárias suíças (demonstração).
+- **`PriceConverter.sol`** — biblioteca de integração com Chainlink para conversão multi-moeda.
+- **`interfaces/IStrategy.sol`**, **`interfaces/AggregatorV3Interface.sol`** — interfaces.
+- **`mocks/MockUSDC.sol`** — ERC-20 de teste.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      Frontend (Next.js)                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Wallet       │  │ Dashboard    │  │ Tax Report   │  │
-│  │ Connect      │  │ Metrics      │  │ Generator    │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-└────────────────────────────┬────────────────────────────┘
-                             │ ethers.js v6
-                             ▼
-┌─────────────────────────────────────────────────────────┐
 │                   Smart Contracts Layer                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Vault.sol    │◄─┤ Compliance   │  │ Price        │  │
-│  │ (ERC-4626)   │  │ Module       │  │ Converter    │  │
-│  └──────┬───────┘  └──────────────┘  └──────┬───────┘  │
-│         │                                     │          │
-│         ▼                                     ▼          │
-│  ┌──────────────┐                    ┌──────────────┐  │
-│  │ Strategy     │                    │ Chainlink    │  │
-│  │ Contracts    │                    │ Oracles      │  │
-│  └──────────────┘                    └──────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────┐
-│              DeFi Protocols (Future)                     │
-│     Aave    │    Compound    │    Curve                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ Vault.sol    │◄─┤ Swiss        │  │ PriceConverter│  │
+│  │ (ERC-4626)   │  │ Compliance   │  │ (library)     │  │
+│  └──────┬───────┘  └──────────────┘  └──────┬───────┘   │
+│         │ IStrategy                          │           │
+│         ▼                                    ▼           │
+│  ┌──────────────┐                    ┌──────────────┐   │
+│  │ Strategy     │                    │ Chainlink    │   │
+│  │ (interface)  │                    │ Oracles      │   │
+│  └──────────────┘                    └──────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
 
+## Compliance (mock)
+
+- **Imposto de renda** sobre yield DeFi: 0–40%
+- **Imposto sobre patrimônio:** 0,1–1%
+- **Relatórios:** conversão multi-moeda CHF/USD via Chainlink
+- **KYC/AML:** checagem simulada
+
+> ⚠️ Este módulo é um **mock simplificado** para fins de demonstração. Não constitui aconselhamento
+> tributário. Consulte um profissional para conformidade real.
+
 ## Tech Stack
 
-### Smart Contracts
-
-- **Solidity**: ^0.8.20
-- **Framework**: Hardhat with TypeScript
-- **Libraries**:
-  - OpenZeppelin Contracts v4.9+ (ERC-4626, security modules)
-  - Chainlink Contracts (price feeds)
-- **Testing**: Chai, Waffle, 100% coverage target
-- **Security**: ReentrancyGuard, AccessControl
+- **Solidity:** ^0.8.20
+- **Framework:** Hardhat + TypeScript
+- **Bibliotecas:** OpenZeppelin Contracts **v5.0.2** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20), Chainlink Contracts (price feeds)
+- **Testes:** Hardhat Toolbox (Chai + matchers), `solidity-coverage`, `hardhat-gas-reporter`
+- **Tipagem:** TypeChain (typings dos contratos para os testes/scripts)
 
 ## Installation
 
-### Prerequisites
-
-- Node.js >= 18.0.0
-- npm or yarn
-
-### Setup
+Pré-requisitos: Node.js >= 18.
 
 ```bash
-# Install dependencies
 npm install
-
-# Copy environment variables
-cp .env.example .env
-
-# Edit .env with your keys (optional for testing)
+cp .env.example .env        # edite as chaves (opcional para rodar os testes locais)
 ```
 
 ## Usage
 
-### Compile Contracts
-
 ```bash
-npm run compile
-```
-
-### Run Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run with coverage
-npm run coverage
-
-# Run with gas reporting
-npm run gas-report
+npm run compile      # compila os contratos
+npm test             # testes unitários (Hardhat)
+npm run coverage     # relatório de cobertura
+npm run gas-report   # relatório de gás
 ```
 
 ### Deploy
 
 ```bash
-# Deploy to local Hardhat network
-npm run deploy:localhost
-
-# Deploy to Sepolia testnet
-npm run deploy:sepolia
+npm run deploy:localhost   # rede Hardhat local
+npm run deploy:sepolia     # testnet Sepolia (requer .env)
 ```
 
 ## Testing
 
-Our test suite includes comprehensive unit tests:
+Testes unitários (`test/unit/Vault.test.ts`) cobrindo o ciclo de vida do vault:
 
-- ✅ Vault deployment and initialization
-- ✅ Deposit functionality (ERC-4626)
-- ✅ Withdrawal and redemption
-- ✅ Strategy management
-- ✅ Access control
-- ✅ Emergency shutdown
-- ✅ Edge cases and error handling
+- Deploy e inicialização (nome, símbolo, asset, owner)
+- Depósitos e saques/resgates (ERC-4626)
+- Gestão de estratégia (alocação/retirada)
+- Controle de acesso (`Ownable`)
+- Emergency shutdown
+- Casos de borda e validação de erros
 
 ## Security
 
-### Security Measures
+Mecanismos efetivamente implementados nos contratos:
 
-- ✅ **ReentrancyGuard**: All state-changing functions protected
-- ✅ **AccessControl**: Ownable pattern for admin functions
-- ✅ **Input Validation**: All user inputs validated
-- ✅ **SafeERC20**: Prevents token transfer issues
-- ✅ **Emergency Shutdown**: Circuit breaker for emergencies
+- **ReentrancyGuard** nas funções que mudam estado
+- **Ownable** para funções administrativas
+- **SafeERC20** nas transferências de token
+- **Validação de inputs** e **emergency shutdown** (circuit breaker) no vault
 
-### Disclaimer
+> ⚠️ **Não auditado.** Projeto de portfólio/demonstração. Não use com fundos reais.
 
-⚠️ **Not audited** - This is a portfolio/demonstration project.
+## Gas
 
-## Swiss Tax Compliance
-
-### Tax Framework (Simplified)
-
-**Income Tax on DeFi Yield**: 0-40%
-**Wealth Tax on Holdings**: 0.1-1%
-**Capital Gains**: Tax-free for private investors
-
-**⚠️ IMPORTANT**: This compliance module is a **simplified mock** for demonstration purposes. Consult a Swiss tax professional for actual compliance.
-
-## Gas Optimization
-
-Implemented techniques:
-
-- ✅ `constant` and `immutable` for fixed values
-- ✅ Storage packing
-- ✅ `external` visibility where possible
-- ✅ Memory caching of storage reads
-
-**Target**: < 300k gas per transaction
+Técnicas aplicadas: `constant`/`immutable` para valores fixos, packing de storage,
+visibilidade `external` quando possível e cache de leituras de storage em memória.
 
 ## Project Structure
 
 ```
 swiss-defi-optimizer/
 ├── contracts/
-│   ├── core/              # Main vault contract
-│   ├── strategies/        # Yield strategies
-│   ├── compliance/        # Swiss compliance module
-│   ├── libraries/         # Chainlink integration
-│   └── mocks/             # Test mocks
+│   ├── core/              # Vault.sol (ERC-4626)
+│   ├── compliance/        # SwissCompliance.sol (mock)
+│   ├── libraries/         # PriceConverter.sol (Chainlink)
+│   ├── interfaces/        # IStrategy, AggregatorV3Interface
+│   └── mocks/             # MockUSDC.sol
 ├── test/
-│   ├── unit/              # Unit tests
-│   ├── integration/       # Integration tests
-│   └── security/          # Security tests
+│   └── unit/              # Vault.test.ts
 ├── scripts/
-│   ├── deploy.ts          # Deployment script
-│   └── verify.ts          # Etherscan verification
-├── deployments/           # Deployment addresses
-└── docs/                  # Documentation
+│   ├── deploy.ts          # script de deploy
+│   └── verify.ts          # verificação no Etherscan
+├── deployments/           # endereços de deploy
+└── docs/                  # documentação
 ```
 
-## Roadmap
+## Possível trabalho futuro (não implementado)
 
-### Phase 1: Foundations ✅
-- [x] Vault.sol with ERC-4626
-- [x] Unit tests
-- [x] Hardhat setup
-- [x] Deploy scripts
-
-### Phase 2: Full Stack (Planned)
-- [ ] Next.js frontend
-- [ ] Wallet connection
-- [ ] Dashboard UI
-
-### Phase 3: Compliance ✅
-- [x] SwissCompliance.sol
-- [x] Chainlink integration
-- [ ] Tax report UI
-
-### Phase 4: Optimization (Planned)
-- [ ] Gas optimization
-- [ ] Security tests
-- [ ] Testnet deployment
+- Frontend (carteira + dashboard) — **não existe neste repositório**
+- Integração com protocolos de yield reais (Aave/Compound/Curve)
+- Testes de integração e de segurança dedicados
+- Deploy em testnet com endereço verificado no Etherscan
 
 ## License
 
-MIT License
+MIT
 
 ## Disclaimer
 
-**This project is for educational and portfolio purposes only.**
-
-- **NOT financial advice**
-- **NOT legal advice**
-- **NOT tax advice**
-- **NOT audited** - Do not use with real funds
-
----
-
-**Built with ❤️ for the Swiss DeFi ecosystem**
+**Projeto para fins educacionais e de portfólio.** NÃO é aconselhamento financeiro, jurídico ou
+tributário. **Não auditado** — não use com fundos reais.

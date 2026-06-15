@@ -7,8 +7,6 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "test:unit": "hardhat test test/unit/**/*.test.ts",
-    "test:integration": "hardhat test test/integration/**/*.test.ts",
-    "test:security": "hardhat test test/security/**/*.test.ts",
     "coverage": "hardhat coverage",
     "gas-report": "REPORT_GAS=true hardhat test",
     "node": "hardhat node",
