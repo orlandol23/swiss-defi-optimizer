@@ -72,7 +72,7 @@ contract SwissCompliance is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     event UserAllowlisted(address indexed user, bool status);
-    event TaxDataUpdated(address indexed user, uint256 deposits, uint256 withdrawals, uint256 yield);
+    event TaxDataUpdated(address indexed user, uint256 deposits, uint256 withdrawals, uint256 yieldAmount);
     event PriceFeedUpdated(address indexed oldFeed, address indexed newFeed);
 
     /*//////////////////////////////////////////////////////////////
@@ -128,25 +128,25 @@ contract SwissCompliance is Ownable {
      * @param user Address of user
      * @param deposits Total deposits
      * @param withdrawals Total withdrawals
-     * @param yield Total yield earned
+     * @param yieldAmount Total yield earned
      */
     function updateTaxData(
         address user,
         uint256 deposits,
         uint256 withdrawals,
-        uint256 yield
+        uint256 yieldAmount
     ) external onlyOwner {
         if (user == address(0)) revert ZeroAddress();
 
         userTaxData[user] = TaxData({
             totalDeposits: deposits,
             totalWithdrawals: withdrawals,
-            yieldEarned: yield,
+            yieldEarned: yieldAmount,
             lastUpdated: block.timestamp,
             exists: true
         });
 
-        emit TaxDataUpdated(user, deposits, withdrawals, yield);
+        emit TaxDataUpdated(user, deposits, withdrawals, yieldAmount);
     }
 
     /*//////////////////////////////////////////////////////////////

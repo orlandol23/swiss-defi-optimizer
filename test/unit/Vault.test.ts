@@ -1,7 +1,5 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Vault, MockUSDC } from "../../typechain-types";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 describe("Vault", function () {
@@ -504,7 +502,7 @@ describe("Vault", function () {
     it("Should prevent reentrancy on deposit", async function () {
       // This test would require a malicious contract
       // For now, we verify the modifier is in place
-      const { vault } = await loadFixture(deployVaultFixture);
+      await loadFixture(deployVaultFixture);
 
       // The nonReentrant modifier should be applied to deposit
       // We can't easily test this without a malicious contract
