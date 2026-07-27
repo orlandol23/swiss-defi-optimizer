@@ -1,6 +1,6 @@
 # Swiss DeFi Yield Optimizer 🇨🇭
 
-> Cofre DeFi (ERC-4626) em Solidity com um módulo de *compliance* inspirado nas regras suíças e conversão de moeda via oráculos Chainlink. **Projeto de smart contracts** (Hardhat + TypeScript) — não há frontend.
+> A Solidity DeFi vault (ERC-4626) with a *compliance* module inspired by Swiss tax rules and currency conversion through Chainlink oracles. **A smart contract project** (Hardhat + TypeScript) — there is no frontend.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-blue)](https://soliditylang.org/)
@@ -8,25 +8,25 @@
 
 ## Overview
 
-Vault tokenizado **ERC-4626** que aceita USDC e pode alocar fundos em uma estratégia externa
-(via interface `IStrategy`), acompanhado de um módulo de compliance e conversão de preço.
-O foco do projeto é o **código dos contratos e seus testes**, como peça de estudo de DeFi/Solidity.
+A tokenized **ERC-4626** vault that accepts USDC and can allocate funds to an external strategy
+(through the `IStrategy` interface), alongside a compliance and price conversion module.
+The project focuses on the **contract code and its tests**, as a DeFi/Solidity study piece.
 
-- **Smart contracts:** vault ERC-4626 com `ReentrancyGuard`, `Ownable` e `SafeERC20`.
-- **Oráculos:** Chainlink Price Feeds para conversão CHF/USD.
-- **Compliance:** módulo *mock* que simula tributação suíça (renda/patrimônio) e checagem KYC/AML.
-- **Tooling:** Hardhat + TypeScript + TypeChain + ethers v6 (apenas em scripts e testes).
+- **Smart contracts:** ERC-4626 vault with `ReentrancyGuard`, `Ownable` and `SafeERC20`.
+- **Oracles:** Chainlink Price Feeds for CHF/USD conversion.
+- **Compliance:** *mock* module simulating Swiss taxation (income/wealth) and KYC/AML checks.
+- **Tooling:** Hardhat + TypeScript + TypeChain + ethers v6 (in scripts and tests only).
 
-> ⚠️ Escopo: este repositório contém **apenas os contratos**. Não há frontend, integração com
-> carteira nem integração com protocolos externos (Aave/Compound/Curve) — ver "Possível trabalho futuro".
+> ⚠️ Scope: this repository contains **the contracts only**. There is no frontend, no wallet
+> integration and no integration with external protocols (Aave/Compound/Curve) — see "Possible future work".
 
-## Contratos
+## Contracts
 
-- **`Vault.sol`** — vault ERC-4626 sobre USDC, com gestão de estratégia e *emergency shutdown*.
-- **`SwissCompliance.sol`** — módulo *mock* de regras tributárias suíças (demonstração).
-- **`PriceConverter.sol`** — biblioteca de integração com Chainlink para conversão multi-moeda.
+- **`Vault.sol`** — ERC-4626 vault over USDC, with strategy management and *emergency shutdown*.
+- **`SwissCompliance.sol`** — *mock* module of Swiss tax rules (demonstration).
+- **`PriceConverter.sol`** — Chainlink integration library for multi-currency conversion.
 - **`interfaces/IStrategy.sol`**, **`interfaces/AggregatorV3Interface.sol`** — interfaces.
-- **`mocks/MockUSDC.sol`** — ERC-20 de teste.
+- **`mocks/MockUSDC.sol`** — test ERC-20.
 
 ## Architecture
 
@@ -48,73 +48,73 @@ O foco do projeto é o **código dos contratos e seus testes**, como peça de es
 
 ## Compliance (mock)
 
-- **Imposto de renda** sobre yield DeFi: 0–40%
-- **Imposto sobre patrimônio:** 0,1–1%
-- **Relatórios:** conversão multi-moeda CHF/USD via Chainlink
-- **KYC/AML:** checagem simulada
+- **Income tax** on DeFi yield: 0–40%
+- **Wealth tax:** 0.1–1%
+- **Reporting:** multi-currency CHF/USD conversion via Chainlink
+- **KYC/AML:** simulated checks
 
-> ⚠️ Este módulo é um **mock simplificado** para fins de demonstração. Não constitui aconselhamento
-> tributário. Consulte um profissional para conformidade real.
+> ⚠️ This module is a **simplified mock** for demonstration purposes. It does not constitute tax
+> advice. Consult a professional for real compliance.
 
 ## Tech Stack
 
 - **Solidity:** ^0.8.20
 - **Framework:** Hardhat + TypeScript
-- **Bibliotecas:** OpenZeppelin Contracts **v5.0.2** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20), Chainlink Contracts (price feeds)
-- **Testes:** Hardhat Toolbox (Chai + matchers), `solidity-coverage`, `hardhat-gas-reporter`
-- **Tipagem:** TypeChain (typings dos contratos para os testes/scripts)
+- **Libraries:** OpenZeppelin Contracts **v5.0.2** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20), Chainlink Contracts (price feeds)
+- **Tests:** Hardhat Toolbox (Chai + matchers), `solidity-coverage`, `hardhat-gas-reporter`
+- **Typings:** TypeChain (contract typings for the tests/scripts)
 
 ## Installation
 
-Pré-requisitos: Node.js >= 18.
+Prerequisites: Node.js >= 18.
 
 ```bash
 npm install
-cp .env.example .env        # edite as chaves (opcional para rodar os testes locais)
+cp .env.example .env        # edit the keys (optional for running the local tests)
 ```
 
 ## Usage
 
 ```bash
-npm run compile      # compila os contratos
-npm test             # testes unitários (Hardhat)
-npm run coverage     # relatório de cobertura
-npm run gas-report   # relatório de gás
+npm run compile      # compile the contracts
+npm test             # unit tests (Hardhat)
+npm run coverage     # coverage report
+npm run gas-report   # gas report
 ```
 
 ### Deploy
 
 ```bash
-npm run deploy:localhost   # rede Hardhat local
-npm run deploy:sepolia     # testnet Sepolia (requer .env)
+npm run deploy:localhost   # local Hardhat network
+npm run deploy:sepolia     # Sepolia testnet (requires .env)
 ```
 
 ## Testing
 
-Testes unitários (`test/unit/Vault.test.ts`) cobrindo o ciclo de vida do vault:
+Unit tests (`test/unit/Vault.test.ts`) covering the vault lifecycle:
 
-- Deploy e inicialização (nome, símbolo, asset, owner)
-- Depósitos e saques/resgates (ERC-4626)
-- Gestão de estratégia (alocação/retirada)
-- Controle de acesso (`Ownable`)
+- Deployment and initialization (name, symbol, asset, owner)
+- Deposits and withdrawals/redemptions (ERC-4626)
+- Strategy management (allocation/withdrawal)
+- Access control (`Ownable`)
 - Emergency shutdown
-- Casos de borda e validação de erros
+- Edge cases and error validation
 
 ## Security
 
-Mecanismos efetivamente implementados nos contratos:
+Mechanisms actually implemented in the contracts:
 
-- **ReentrancyGuard** nas funções que mudam estado
-- **Ownable** para funções administrativas
-- **SafeERC20** nas transferências de token
-- **Validação de inputs** e **emergency shutdown** (circuit breaker) no vault
+- **ReentrancyGuard** on state-changing functions
+- **Ownable** for administrative functions
+- **SafeERC20** on token transfers
+- **Input validation** and **emergency shutdown** (circuit breaker) in the vault
 
-> ⚠️ **Não auditado.** Projeto de portfólio/demonstração. Não use com fundos reais.
+> ⚠️ **Not audited.** Portfolio/demonstration project. Do not use with real funds.
 
 ## Gas
 
-Técnicas aplicadas: `constant`/`immutable` para valores fixos, packing de storage,
-visibilidade `external` quando possível e cache de leituras de storage em memória.
+Techniques applied: `constant`/`immutable` for fixed values, storage packing,
+`external` visibility where possible and caching storage reads in memory.
 
 ## Project Structure
 
@@ -129,24 +129,24 @@ swiss-defi-optimizer/
 ├── test/
 │   └── unit/              # Vault.test.ts
 ├── scripts/
-│   ├── deploy.ts          # script de deploy
-│   └── verify.ts          # verificação no Etherscan
-├── deployments/           # endereços de deploy
-└── docs/                  # documentação
+│   ├── deploy.ts          # deployment script
+│   └── verify.ts          # Etherscan verification
+├── deployments/           # deployment addresses
+└── docs/                  # documentation
 ```
 
-## Possível trabalho futuro (não implementado)
+## Possible future work (not implemented)
 
-- Frontend (carteira + dashboard) — **não existe neste repositório**
-- Integração com protocolos de yield reais (Aave/Compound/Curve)
-- Testes de integração e de segurança dedicados
-- Deploy em testnet com endereço verificado no Etherscan
+- Frontend (wallet + dashboard) — **does not exist in this repository**
+- Integration with real yield protocols (Aave/Compound/Curve)
+- Dedicated integration and security tests
+- Testnet deployment with a verified address on Etherscan
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
-**Projeto para fins educacionais e de portfólio.** NÃO é aconselhamento financeiro, jurídico ou
-tributário. **Não auditado** — não use com fundos reais.
+**Project for educational and portfolio purposes.** This is NOT financial, legal or tax advice.
+**Not audited** — do not use with real funds.

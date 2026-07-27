@@ -1,313 +1,325 @@
 # Testing Guide - Swiss DeFi Optimizer
 
-## 🧪 Guia Completo de Testes
+## 🧪 Complete Testing Guide
 
-Este guia mostra como validar que tudo está funcionando corretamente no projeto.
+This guide shows how to verify that everything in the project is working correctly.
 
 ---
 
-## 📋 Checklist Rápido
+## 📋 Quick Checklist
 
 ```bash
-# 1. Verificar instalação de dependências
+# 1. Check dependency installation
 npm install
 
-# 2. Compilar contratos
+# 2. Compile contracts
 npm run compile
 
-# 3. Rodar testes
+# 3. Run tests
 npm test
 
-# 4. Verificar cobertura
+# 4. Check coverage
 npm run coverage
 
-# 5. Analisar gas
+# 5. Analyze gas
 npm run gas-report
 
-# 6. Verificar tamanho dos contratos
+# 6. Check contract sizes
 npm run size
 ```
 
 ---
 
-## 🚀 Testes Passo a Passo
+## 🚀 Step-by-Step Testing
 
-### 1. Verificar Ambiente
+### 1. Check the Environment
 
-**Pré-requisitos:**
+**Prerequisites:**
 ```bash
-# Verificar versão do Node.js (precisa >= 18)
+# Check the Node.js version (needs >= 18)
 node --version
 
-# Verificar npm
+# Check npm
 npm --version
 
-# Verificar Git
+# Check Git
 git --version
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
-v18.x.x ou v20.x.x
-9.x.x ou superior
+v18.x.x or v20.x.x
+9.x.x or higher
 git version 2.x.x
 ```
 
 ---
 
-### 2. Instalar Dependências
+### 2. Install Dependencies
 
 ```bash
-# Limpar cache (se necessário)
+# Clear the cache (if needed)
 rm -rf node_modules package-lock.json
 
-# Instalar dependências
+# Install dependencies
 npm install
 ```
 
-**Verificar instalação:**
+**Verify the installation:**
 ```bash
-# Verificar se hardhat foi instalado
+# Check that hardhat was installed
 npx hardhat --version
 
-# Verificar OpenZeppelin
+# Check OpenZeppelin
 npm list @openzeppelin/contracts
 
-# Verificar Chainlink
+# Check Chainlink
 npm list @chainlink/contracts
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
-Hardhat version 2.27.0 (ou similar)
-@openzeppelin/contracts@4.9.6
+Hardhat version 2.29.0 (or similar)
+@openzeppelin/contracts@5.0.2
 @chainlink/contracts@1.5.0
 ```
 
 ---
 
-### 3. Compilar Contratos
+### 3. Compile the Contracts
 
 ```bash
-# Compilar todos os contratos
+# Compile all contracts
 npm run compile
 ```
 
-**O que acontece:**
-- Hardhat baixa o compilador Solidity 0.8.20 (primeira vez)
-- Compila todos os contratos em `contracts/`
-- Gera artefatos em `artifacts/`
-- Gera tipos TypeScript em `typechain-types/`
+**What happens:**
+- Hardhat downloads the Solidity 0.8.20 compiler (first run)
+- Compiles every contract under `contracts/`
+- Generates artifacts in `artifacts/`
+- Generates TypeScript types in `typechain-types/`
 
-**Saída esperada:**
+**Expected output:**
 ```
-Compiled 10 Solidity files successfully
+Compiled 19 Solidity files successfully (evm target: paris).
 ```
 
-**Verificar compilação:**
+**Verify the compilation:**
 ```bash
-# Verificar se artefatos foram gerados
+# Check that artifacts were generated
 ls artifacts/contracts/core/Vault.sol/
 
-# Verificar tipos TypeScript
+# Check the TypeScript types
 ls typechain-types/
 ```
 
-**Possíveis erros:**
+**Possible errors:**
 
-❌ **Erro: "Cannot download compiler"**
+❌ **Error: "Cannot download compiler"**
 ```
-Solução: Ambiente pode estar bloqueando download
-- Tente usar VPN ou rede diferente
-- Ou instale solc manualmente: npm install -g solc@0.8.20
+Fix: the environment may be blocking the download
+- Try a VPN or a different network
+- Or install solc manually: npm install -g solc@0.8.20
 ```
 
-❌ **Erro: "File not found @openzeppelin"**
+❌ **Error: "File not found @openzeppelin"**
 ```
-Solução: Reinstalar dependências
+Fix: reinstall the dependencies
 - rm -rf node_modules
 - npm install
 ```
 
 ---
 
-### 4. Rodar Testes Unitários
+### 4. Run the Unit Tests
 
 ```bash
-# Rodar todos os testes
+# Run every test
 npm test
 
-# Rodar com detalhes verbose
+# Run with verbose detail
 npm test -- --verbose
 
-# Rodar testes específicos
+# Run a specific test file
 npx hardhat test test/unit/Vault.test.ts
 
-# Rodar apenas testes de depósito
+# Run only the deposit tests
 npx hardhat test test/unit/Vault.test.ts --grep "Deposits"
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
   Vault
     Deployment
       ✓ Should set the correct name and symbol (XXms)
       ✓ Should set the correct owner (XXms)
       ✓ Should set the correct asset (XXms)
-      ... (mais testes)
+      ... (more tests)
     Deposits
       ✓ Should allow users to deposit USDC (XXms)
-      ... (mais testes)
+      ... (more tests)
 
-  30 passing (XXs)
+  60 passing (XXs)
 ```
 
-**Análise de resultados:**
+**Reading the results:**
 
-✅ **Todos os testes passaram**
-- Contratos funcionando corretamente
-- Segurança validada
-- Pode prosseguir para próximos passos
+✅ **All tests passed**
+- The contracts behave correctly
+- Security checks validated
+- Safe to move on to the next steps
 
-⚠️ **Alguns testes falharam**
-- Verificar mensagem de erro
-- Revisar código do contrato
-- Verificar se mudanças recentes quebraram algo
+⚠️ **Some tests failed**
+- Read the error message
+- Review the contract code
+- Check whether a recent change broke something
 
-❌ **Muitos testes falharam**
-- Verificar se contratos compilaram corretamente
-- Verificar se dependências estão corretas
-- Limpar cache: `npm run clean` e recompilar
+❌ **Many tests failed**
+- Check that the contracts compiled correctly
+- Check that the dependencies are correct
+- Clear the cache: `npm run clean`, then recompile
 
 ---
 
-### 5. Verificar Cobertura de Código
+### 5. Check Code Coverage
 
 ```bash
-# Gerar relatório de cobertura
+# Generate the coverage report
 npm run coverage
 ```
 
-**O que acontece:**
-- Hardhat roda todos os testes com instrumentação
-- Gera relatório de cobertura em `coverage/`
-- Exibe resumo no terminal
+**What happens:**
+- Hardhat runs every test with instrumentation
+- Generates a coverage report in `coverage/`
+- Prints a summary in the terminal
 
-**Saída esperada:**
+**Expected output:**
 ```
------------------------|----------|----------|----------|----------|
-File                   |  % Stmts | % Branch |  % Funcs |  % Lines |
------------------------|----------|----------|----------|----------|
- contracts/            |      100 |      100 |      100 |      100 |
-  Vault.sol            |      100 |      100 |      100 |      100 |
-  SwissCompliance.sol  |    95.50 |    90.00 |      100 |    95.00 |
------------------------|----------|----------|----------|----------|
-All files              |    97.75 |    95.00 |      100 |    97.50 |
------------------------|----------|----------|----------|----------|
+----------------------------|----------|----------|----------|----------|----------------|
+File                        |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+----------------------------|----------|----------|----------|----------|----------------|
+ compliance/                |        0 |        0 |        0 |        0 |                |
+  SwissCompliance.sol       |        0 |        0 |        0 |        0 |... 331,332,335 |
+ core/                      |    78.95 |    71.25 |    93.33 |    82.86 |                |
+  Vault.sol                 |    78.95 |    71.25 |    93.33 |    82.86 |... 317,319,321 |
+ interfaces/                |      100 |      100 |      100 |      100 |                |
+  AggregatorV3Interface.sol |      100 |      100 |      100 |      100 |                |
+  IStrategy.sol             |      100 |      100 |      100 |      100 |                |
+ libraries/                 |        0 |        0 |        0 |        0 |                |
+  PriceConverter.sol        |        0 |        0 |        0 |        0 |... 197,198,199 |
+ mocks/                     |       75 |      100 |       75 |       75 |                |
+  MockUSDC.sol              |       75 |      100 |       75 |       75 |             40 |
+----------------------------|----------|----------|----------|----------|----------------|
+All files                   |    42.11 |    46.72 |    48.57 |    39.87 |                |
+----------------------------|----------|----------|----------|----------|----------------|
 ```
 
-**Interpretar resultados:**
+**Interpreting the results:**
 
-✅ **Cobertura > 90%**: Excelente! Código bem testado
-⚠️ **Cobertura 70-90%**: Bom, mas pode melhorar
-❌ **Cobertura < 70%**: Adicionar mais testes
+✅ **Coverage > 90%**: excellent, the code is well tested
+⚠️ **Coverage 70-90%**: good, but there is room to improve
+❌ **Coverage < 70%**: add more tests
 
-**Visualizar relatório HTML:**
+**View the HTML report:**
 ```bash
-# Abrir relatório no navegador
+# Open the report in a browser
 open coverage/index.html
 
-# Ou visualizar arquivo específico
+# Or inspect a specific file
 cat coverage/lcov.info
 ```
 
 ---
 
-### 6. Análise de Gas
+### 6. Gas Analysis
 
 ```bash
-# Gerar relatório de gas
+# Generate the gas report
 npm run gas-report
 
-# Com valores em CHF (se API key configurada)
+# With values in CHF (if an API key is configured)
 COINMARKETCAP_API_KEY=your_key npm run gas-report
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
-·-----------------------------------------|---------------------------|
-|  Solc version: 0.8.20                   ·  Optimizer enabled: true  |
-·-----------------------------------------|---------------------------|
-|  Methods                                                            |
-··················|·······················|·········|·········|········|
-|  Contract       ·  Method               ·  Min    ·  Max    ·  Avg  |
-··················|·······················|·········|·········|········|
-|  Vault          ·  deposit              ·  85000  ·  102000 · 93500 |
-|  Vault          ·  withdraw             ·  45000  ·   58000 · 51500 |
-|  Vault          ·  setStrategy          ·  28000  ·   45000 · 36500 |
-··················|·······················|·········|·········|········|
+·································|·················|···············|·················|················|···············
+|  Contracts / Methods           ·  Min            ·  Max          ·  Avg            ·  # calls       ·  chf (avg)   │
+·································|·················|···············|·················|················|···············
+|  Vault                         ·                                                                                   │
+·································|·················|···············|·················|················|···············
+|      deposit                   ·         80,497  ·      114,721  ·        113,000  ·            20  ·           -  │
+|      withdraw                  ·              -  ·            -  ·         52,024  ·             3  ·           -  │
+|      setStrategy               ·              -  ·            -  ·         47,841  ·             6  ·           -  │
+|      setDepositCap             ·         25,504  ·       30,352  ·         29,903  ·            22  ·           -  │
+·································|·················|···············|·················|················|···············
 ```
 
-**Análise de gas:**
+**Gas analysis:**
 
-✅ **Target atingido**: < 300k gas por transação
-- Deposit: ~93k ✅
-- Withdraw: ~51k ✅
-- Admin functions: ~36k ✅
+✅ **Target met**: < 300k gas per transaction
+- Deposit: ~113k ✅
+- Withdraw: ~52k ✅
+- Admin functions: ~30–48k ✅
 
-⚠️ **Acima do target**: Considerar otimizações
-- Revisar loops
-- Usar `unchecked` onde seguro
-- Otimizar storage packing
+⚠️ **Above target**: consider optimizing
+- Review loops
+- Use `unchecked` where it is safe
+- Optimize storage packing
 
 ---
 
-### 7. Verificar Tamanho dos Contratos
+### 7. Check Contract Sizes
 
 ```bash
-# Verificar tamanho dos contratos compilados
+# Check the size of the compiled contracts
 npm run size
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
-·-----------------------------------------|-------------|
-|  Contract Name                          ·  Size (KB)  |
-·-----------------------------------------|-------------|
-|  Vault                                  ·    18.45    |
-|  SwissCompliance                        ·    12.30    |
-|  PriceConverter                         ·     3.20    |
-|  MockUSDC                               ·     6.15    |
-·-----------------------------------------|-------------|
+ ·------------------------|--------------------------------|--------------------------------·
+ |  Solc version: 0.8.20  ·  Optimizer enabled: true       ·  Runs: 200                     │
+ ·························|································|·································
+ |  Contract Name         ·  Deployed size (KiB) (change)  ·  Initcode size (KiB) (change)  │
+ ·························|································|·································
+ |  MockUSDC              ·                 2.018 (0.000)  ·                 2.956 (0.000)  │
+ ·························|································|·································
+ |  PriceConverter        ·                 0.185 (0.000)  ·                 0.215 (0.000)  │
+ ·························|································|·································
+ |  SwissCompliance       ·                 3.910 (0.000)  ·                 4.155 (0.000)  │
+ ·························|································|·································
+ |  Vault                 ·                 7.228 (0.000)  ·                 8.645 (0.000)  │
+ ·------------------------|--------------------------------|--------------------------------·
 ```
 
-**Limite do Ethereum:**
-- **Máximo**: 24KB (24,576 bytes)
-- **Todos os contratos**: ✅ Dentro do limite
+**Ethereum limit:**
+- **Maximum**: 24KB (24,576 bytes)
+- **All contracts**: ✅ within the limit
 
-❌ **Se exceder 24KB:**
-- Dividir contrato em múltiplos contratos
-- Usar libraries para código compartilhado
-- Remover funções não essenciais
+❌ **If a contract exceeds 24KB:**
+- Split it into multiple contracts
+- Move shared code into libraries
+- Remove non-essential functions
 
 ---
 
-### 8. Testes de Segurança
+### 8. Security Testing
 
 ```bash
-# Análise estática com Slither (se instalado)
+# Static analysis with Slither (if installed)
 slither .
 
-# Verificar vulnerabilidades conhecidas
+# Check for known vulnerabilities
 npm audit
 
-# Análise de dependências
+# Dependency analysis
 npm audit --audit-level=moderate
 ```
 
-**Instalar Slither (opcional):**
+**Install Slither (optional):**
 ```bash
-# MacOS
+# macOS
 brew install slither-analyzer
 
 # Linux/Ubuntu
@@ -315,14 +327,14 @@ pip3 install slither-analyzer
 solc-select install 0.8.20
 solc-select use 0.8.20
 
-# Rodar análise
+# Run the analysis
 slither . --filter-paths "node_modules|test"
 ```
 
-**Saída esperada (Slither):**
+**Expected output (Slither):**
 ```
 Compilation warnings/errors on contracts/core/Vault.sol:
-... (avisos podem ser ignorados)
+... (warnings can be ignored)
 
 INFO:Detectors:
 No issues found.
@@ -330,87 +342,87 @@ No issues found.
 
 ---
 
-### 9. Testes em Localhost
+### 9. Testing on Localhost
 
 ```bash
-# Terminal 1: Iniciar node local
+# Terminal 1: start a local node
 npm run node
 
-# Terminal 2: Deploy local
+# Terminal 2: deploy locally
 npm run deploy:localhost
 
-# Terminal 3: Interagir via console
+# Terminal 3: interact through the console
 npx hardhat console --network localhost
 ```
 
-**No console Hardhat:**
+**In the Hardhat console:**
 ```javascript
-// Conectar aos contratos
+// Connect to the contracts
 const Vault = await ethers.getContractFactory("Vault");
 const [deployer] = await ethers.getSigners();
 
-// Carregar deployment addresses
+// Load the deployment addresses
 const addresses = require('./deployments/localhost.json');
 const vault = await Vault.attach(addresses.vault);
 
-// Testar depósito (exemplo)
+// Test a deposit (example)
 const usdc = await ethers.getContractAt("MockUSDC", addresses.usdc);
 await usdc.approve(vault.address, ethers.parseUnits("1000", 6));
 await vault.deposit(ethers.parseUnits("1000", 6), deployer.address);
 
-// Verificar shares
+// Check the shares
 const shares = await vault.balanceOf(deployer.address);
 console.log("Shares:", ethers.formatUnits(shares, 6));
 ```
 
 ---
 
-### 10. Validação Final (Checklist)
+### 10. Final Validation (Checklist)
 
-Antes de fazer deploy ou criar PR, verificar:
+Before deploying or opening a PR, check:
 
 ```bash
-# ✅ Compilação
+# ✅ Compilation
 npm run compile
-# Deve completar sem erros
+# Must complete without errors
 
-# ✅ Testes
+# ✅ Tests
 npm test
-# Todos devem passar (30/30)
+# All must pass (60/60)
 
-# ✅ Cobertura
+# ✅ Coverage
 npm run coverage
-# Deve ser > 90%
+# Should be > 90%
 
 # ✅ Gas
 npm run gas-report
-# Funções principais < 300k
+# Main functions < 300k
 
-# ✅ Tamanho
+# ✅ Size
 npm run size
-# Todos os contratos < 24KB
+# Every contract < 24KB
 
-# ✅ Linting TypeScript
+# ✅ TypeScript linting
 npx tsc --noEmit
-# Sem erros de tipo
+# No type errors
 
 # ✅ Audit
 npm audit --audit-level=moderate
-# Sem vulnerabilidades críticas
+# No critical vulnerabilities
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Problema: "Cannot find module"
+### Problem: "Cannot find module"
 
-**Erro:**
+**Error:**
 ```
 Error: Cannot find module '@openzeppelin/contracts'
 ```
 
-**Solução:**
+**Fix:**
 ```bash
 rm -rf node_modules package-lock.json
 npm install
@@ -418,20 +430,20 @@ npm install
 
 ---
 
-### Problema: "Compilation failed"
+### Problem: "Compilation failed"
 
-**Erro:**
+**Error:**
 ```
 Error HH600: Compilation failed
 ```
 
-**Solução 1 - Limpar cache:**
+**Fix 1 - clear the cache:**
 ```bash
 npm run clean
 npm run compile
 ```
 
-**Solução 2 - Reinstalar solc:**
+**Fix 2 - reinstall solc:**
 ```bash
 rm -rf ~/.cache/hardhat-nodejs
 npm run compile
@@ -439,53 +451,53 @@ npm run compile
 
 ---
 
-### Problema: "Test failed: insufficient funds"
+### Problem: "Test failed: insufficient funds"
 
-**Erro:**
+**Error:**
 ```
 Error: sender doesn't have enough funds
 ```
 
-**Solução:**
+**Fix:**
 ```javascript
-// No teste, garantir que usuário tem USDC
+// In the test, make sure the user holds USDC
 await usdc.mint(user1.address, ethers.parseUnits("1000000", 6));
 
-// E aprovar antes de depositar
+// And approve before depositing
 await usdc.connect(user1).approve(vaultAddress, amount);
 ```
 
 ---
 
-### Problema: "Gas estimation failed"
+### Problem: "Gas estimation failed"
 
-**Erro:**
+**Error:**
 ```
 Error: cannot estimate gas
 ```
 
-**Solução:**
+**Fix:**
 ```javascript
-// Fornecer gas explicitamente
+// Provide gas explicitly
 await vault.deposit(amount, user, { gasLimit: 200000 });
 
-// Ou verificar se função está revertendo
+// Or check whether the function is reverting
 await vault.deposit(amount, user).catch(console.log);
 ```
 
 ---
 
-### Problema: "Nonce too high"
+### Problem: "Nonce too high"
 
-**Erro:**
+**Error:**
 ```
 Error: nonce has already been used
 ```
 
-**Solução:**
+**Fix:**
 ```bash
-# Resetar node local
-# Parar node (Ctrl+C) e reiniciar
+# Reset the local node
+# Stop the node (Ctrl+C) and restart it
 npm run node
 ```
 
@@ -493,69 +505,69 @@ npm run node
 
 ## 📊 CI/CD Pipeline
 
-Os workflows do GitHub Actions rodam automaticamente:
+The GitHub Actions workflows run automatically:
 
-### Em cada push:
-- ✅ Compilação
-- ✅ Testes unitários
-- ✅ Análise de TypeScript
-- ✅ Segurança básica
+### On every push:
+- ✅ Compilation
+- ✅ Unit tests
+- ✅ TypeScript analysis
+- ✅ Basic security checks
 
-### Em Pull Requests:
-- ✅ Cobertura de código
-- ✅ Relatório de gas (comentário no PR)
-- ✅ Análise de arquivos alterados
-- ✅ Tamanho dos contratos
+### On pull requests:
+- ✅ Code coverage
+- ✅ Gas report (commented on the PR)
+- ✅ Analysis of the changed files
+- ✅ Contract sizes
 
-### Scheduled (diário):
-- ✅ Análise de segurança completa
+### Scheduled (daily):
+- ✅ Full security analysis
 - ✅ Slither analysis
-- ✅ Audit de dependências
+- ✅ Dependency audit
 
 ### Manual (workflow_dispatch):
-- ✅ Deploy para testnet
-- ✅ Verificação no Etherscan
+- ✅ Deploy to testnet
+- ✅ Etherscan verification
 
 ---
 
-## 🎯 Próximos Passos
+## 🎯 Next Steps
 
-Após validar tudo localmente:
+Once everything checks out locally:
 
-1. **Criar Pull Request**
-   - Workflows automáticos rodarão
-   - Revisar comentários de gas
-   - Verificar cobertura
+1. **Open a Pull Request**
+   - The automated workflows will run
+   - Review the gas comments
+   - Check coverage
 
-2. **Deploy Sepolia** (quando aprovado)
+2. **Deploy to Sepolia** (once approved)
    ```bash
    npm run deploy:sepolia
    npm run verify:sepolia
    ```
 
-3. **Monitorar Contratos**
-   - Etherscan para transações
-   - Events para auditoria
-   - Gas usage em produção
+3. **Monitor the Contracts**
+   - Etherscan for transactions
+   - Events for auditing
+   - Gas usage in production
 
 4. **Frontend Integration**
-   - Usar addresses de `deployments/`
-   - Testar com MetaMask
-   - Validar fluxos completos
+   - Use the addresses from `deployments/`
+   - Test with MetaMask
+   - Validate the full flows
 
 ---
 
-## 📞 Suporte
+## 📞 Support
 
-**Se tudo falhar:**
+**If everything fails:**
 
-1. Verificar versões:
+1. Check the versions:
    ```bash
    node --version  # >= 18
    npm --version   # >= 9
    ```
 
-2. Ambiente limpo:
+2. Clean environment:
    ```bash
    rm -rf node_modules package-lock.json cache artifacts
    npm install
@@ -563,21 +575,21 @@ Após validar tudo localmente:
    npm test
    ```
 
-3. Verificar logs:
+3. Check the logs:
    ```bash
-   # Testes com stack trace completo
+   # Tests with a full stack trace
    npm test -- --verbose --bail
 
-   # Compilação com debug
+   # Compilation with debug output
    npx hardhat compile --verbose
    ```
 
-4. Abrir issue no GitHub com:
-   - Comando executado
-   - Erro completo
-   - Versões (node, npm, hardhat)
-   - Sistema operacional
+4. Open a GitHub issue with:
+   - The command you ran
+   - The full error
+   - Versions (node, npm, hardhat)
+   - Operating system
 
 ---
 
-**Boa sorte com os testes! 🚀**
+**Good luck with the tests! 🚀**
