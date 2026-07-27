@@ -61,7 +61,7 @@ describe("Vault", function () {
     it("Should initialize with max deposit limit", async function () {
       const { vault } = await loadFixture(deployVaultFixture);
 
-      expect(await vault.maxDeposit()).to.equal(ethers.MaxUint256);
+      expect(await vault.depositCap()).to.equal(ethers.MaxUint256);
     });
 
     it("Should revert if asset address is zero", async function () {
@@ -156,14 +156,14 @@ describe("Vault", function () {
       );
 
       const maxDep = ethers.parseUnits("100", 6);
-      await vault.connect(owner).setMaxDeposit(maxDep);
+      await vault.connect(owner).setDepositCap(maxDep);
 
       const depositAmount = ethers.parseUnits("200", 6);
       await usdc.connect(user1).approve(await vault.getAddress(), depositAmount);
 
       await expect(
         vault.connect(user1).deposit(depositAmount, user1.address)
-      ).to.be.revertedWithCustomError(vault, "ExceedsMaxDeposit");
+      ).to.be.revertedWithCustomError(vault, "ExceedsDepositCap");
     });
 
     it("Should revert deposits when emergency shutdown is active", async function () {
@@ -410,11 +410,11 @@ describe("Vault", function () {
 
       const newMax = ethers.parseUnits("10000", 6);
 
-      await expect(vault.connect(owner).setMaxDeposit(newMax))
-        .to.emit(vault, "MaxDepositUpdated")
+      await expect(vault.connect(owner).setDepositCap(newMax))
+        .to.emit(vault, "DepositCapUpdated")
         .withArgs(ethers.MaxUint256, newMax);
 
-      expect(await vault.maxDeposit()).to.equal(newMax);
+      expect(await vault.depositCap()).to.equal(newMax);
     });
 
     it("Should revert when non-owner tries to set max deposit", async function () {
@@ -423,7 +423,7 @@ describe("Vault", function () {
       const newMax = ethers.parseUnits("10000", 6);
 
       await expect(
-        vault.connect(user1).setMaxDeposit(newMax)
+        vault.connect(user1).setDepositCap(newMax)
       ).to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount");
     });
 
@@ -527,6 +527,100 @@ describe("Vault", function () {
 
       // Gas should be less than 300k (target from specs)
       expect(receipt!.gasUsed).to.be.lessThan(300000);
+    });
+  });
+
+  // These exercise the ERC-4626 entry point `maxDeposit(address)` itself, not
+  // the `depositCap` storage variable behind it. Before the rename the public
+  // variable produced a zero-arg `maxDeposit()` getter that sat alongside the
+  // inherited `maxDeposit(address)`; the standard function still returned
+  // type(uint256).max no matter what the cap was set to, so an integrator
+  // reading the vault through the ERC-4626 interface got a limit that the
+  // vault did not honour.
+  describe("ERC-4626 conformance: maxDeposit(address)", function () {
+    it("Should not expose a zero-argument maxDeposit() alongside the standard one", async function () {
+      const { vault } = await loadFixture(deployVaultFixture);
+
+      const overloads = vault.interface.fragments.filter(
+        (f: any) => f.type === "function" && f.name === "maxDeposit"
+      );
+
+      expect(overloads).to.have.lengthOf(1);
+      expect((overloads[0] as any).inputs).to.have.lengthOf(1);
+      expect((overloads[0] as any).inputs[0].type).to.equal("address");
+    });
+
+    it("Should report the uncapped default through the standard function", async function () {
+      const { vault, user1 } = await loadFixture(deployVaultFixture);
+
+      expect(await vault.maxDeposit(user1.address)).to.equal(ethers.MaxUint256);
+    });
+
+    it("Should report the configured cap through the standard function", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      const cap = ethers.parseUnits("100", 6);
+      await vault.connect(owner).setDepositCap(cap);
+
+      expect(await vault.maxDeposit(user1.address)).to.equal(cap);
+    });
+
+    it("Should return 0 while emergency shutdown is active", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(ethers.parseUnits("100", 6));
+      await vault.connect(owner).triggerEmergencyShutdown();
+
+      // EIP-4626: if deposits are disabled, even temporarily, maxDeposit MUST return 0.
+      expect(await vault.maxDeposit(user1.address)).to.equal(0);
+    });
+
+    it("Should accept a deposit of exactly maxDeposit(receiver)", async function () {
+      const { vault, usdc, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(ethers.parseUnits("100", 6));
+
+      const limit = await vault.maxDeposit(user1.address);
+      await usdc.connect(user1).approve(await vault.getAddress(), limit);
+
+      await expect(vault.connect(user1).deposit(limit, user1.address)).to.not.be
+        .reverted;
+    });
+
+    it("Should reject a deposit of maxDeposit(receiver) + 1", async function () {
+      const { vault, usdc, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(ethers.parseUnits("100", 6));
+
+      const limit = await vault.maxDeposit(user1.address);
+      const overLimit = limit + 1n;
+      await usdc.connect(user1).approve(await vault.getAddress(), overLimit);
+
+      await expect(
+        vault.connect(user1).deposit(overLimit, user1.address)
+      ).to.be.revertedWithCustomError(vault, "ExceedsDepositCap");
+    });
+
+    it("Should track setDepositCap so the standard function never drifts", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      for (const raw of ["1", "500", "1000000"]) {
+        const cap = ethers.parseUnits(raw, 6);
+        await vault.connect(owner).setDepositCap(cap);
+        expect(await vault.maxDeposit(user1.address)).to.equal(cap);
+        expect(await vault.maxDeposit(user1.address)).to.equal(
+          await vault.depositCap()
+        );
+      }
+    });
+
+    it("Should never revert, per EIP-4626, even with a zero cap", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(0);
+
+      expect(await vault.maxDeposit(user1.address)).to.equal(0);
+      expect(await vault.maxDeposit(ethers.ZeroAddress)).to.equal(0);
     });
   });
 });
