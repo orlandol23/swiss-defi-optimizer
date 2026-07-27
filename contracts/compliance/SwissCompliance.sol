@@ -79,7 +79,6 @@ contract SwissCompliance is Ownable {
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error NotAllowlisted();
     error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
@@ -96,19 +95,20 @@ contract SwissCompliance is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Check if user is compliant (mock implementation)
+     * @notice Check whether a user has passed the simulated KYC step
      * @param user Address to check
-     * @return compliant True if user is compliant
-     * @dev In production, this would check:
-     *      - KYC/AML verification
-     *      - Sanctions lists
-     *      - Jurisdiction restrictions
-     *      - Transaction limits
+     * @return compliant True if the address is allowlisted
+     * @dev Reads the `isAllowlisted` allowlist that {setAllowlist} maintains.
+     *      The zero address is never compliant, so callers do not have to
+     *      guard it separately.
+     *
+     *      This is still a MOCK: allowlisting is a single owner-controlled
+     *      flag, not real KYC. A production implementation would additionally
+     *      check sanctions lists, jurisdiction restrictions and transaction
+     *      limits, and would not put the whole decision behind one EOA.
      */
-    function isCompliant(address user) external pure returns (bool compliant) {
-        // Mock: For demo, we accept all addresses
-        // In production, would check KYC status, sanctions lists, etc.
-        return user != address(0);
+    function isCompliant(address user) external view returns (bool compliant) {
+        return user != address(0) && isAllowlisted[user];
     }
 
     /**

@@ -23,7 +23,7 @@ The project focuses on the **contract code and its tests**, as a DeFi/Solidity s
 ## Contracts
 
 - **`Vault.sol`** — ERC-4626 vault over USDC, with strategy management and *emergency shutdown*.
-- **`SwissCompliance.sol`** — *mock* module of Swiss tax rules (demonstration).
+- **`SwissCompliance.sol`** — *mock* module of Swiss tax rules (demonstration). **Standalone: the vault does not call it.**
 - **`PriceConverter.sol`** — Chainlink integration library for multi-currency conversion.
 - **`interfaces/IStrategy.sol`**, **`interfaces/AggregatorV3Interface.sol`** — interfaces.
 - **`mocks/MockUSDC.sol`** — test ERC-20.
@@ -55,6 +55,12 @@ The project focuses on the **contract code and its tests**, as a DeFi/Solidity s
 
 > ⚠️ This module is a **simplified mock** for demonstration purposes. It does not constitute tax
 > advice. Consult a professional for real compliance.
+
+> ⚠️ **Not wired into the vault.** `SwissCompliance` is a standalone contract. `Vault.sol` never
+> calls it, and no deposit or withdrawal is gated on compliance — the deploy script simply deploys
+> the two side by side. Treat it as an isolated study piece, not as a compliance layer the vault
+> enforces. `isCompliant()` reads the owner-managed `isAllowlisted` allowlist, which is a stand-in
+> for KYC, not KYC.
 
 ## Tech Stack
 
