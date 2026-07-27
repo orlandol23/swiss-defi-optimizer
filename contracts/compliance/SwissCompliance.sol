@@ -72,14 +72,13 @@ contract SwissCompliance is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     event UserAllowlisted(address indexed user, bool status);
-    event TaxDataUpdated(address indexed user, uint256 deposits, uint256 withdrawals, uint256 yield);
+    event TaxDataUpdated(address indexed user, uint256 deposits, uint256 withdrawals, uint256 yieldAmount);
     event PriceFeedUpdated(address indexed oldFeed, address indexed newFeed);
 
     /*//////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error NotAllowlisted();
     error ZeroAddress();
 
     /*//////////////////////////////////////////////////////////////
@@ -96,19 +95,20 @@ contract SwissCompliance is Ownable {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Check if user is compliant (mock implementation)
+     * @notice Check whether a user has passed the simulated KYC step
      * @param user Address to check
-     * @return compliant True if user is compliant
-     * @dev In production, this would check:
-     *      - KYC/AML verification
-     *      - Sanctions lists
-     *      - Jurisdiction restrictions
-     *      - Transaction limits
+     * @return compliant True if the address is allowlisted
+     * @dev Reads the `isAllowlisted` allowlist that {setAllowlist} maintains.
+     *      The zero address is never compliant, so callers do not have to
+     *      guard it separately.
+     *
+     *      This is still a MOCK: allowlisting is a single owner-controlled
+     *      flag, not real KYC. A production implementation would additionally
+     *      check sanctions lists, jurisdiction restrictions and transaction
+     *      limits, and would not put the whole decision behind one EOA.
      */
     function isCompliant(address user) external view returns (bool compliant) {
-        // Mock: For demo, we accept all addresses
-        // In production, would check KYC status, sanctions lists, etc.
-        return user != address(0);
+        return user != address(0) && isAllowlisted[user];
     }
 
     /**
@@ -128,25 +128,25 @@ contract SwissCompliance is Ownable {
      * @param user Address of user
      * @param deposits Total deposits
      * @param withdrawals Total withdrawals
-     * @param yield Total yield earned
+     * @param yieldAmount Total yield earned
      */
     function updateTaxData(
         address user,
         uint256 deposits,
         uint256 withdrawals,
-        uint256 yield
+        uint256 yieldAmount
     ) external onlyOwner {
         if (user == address(0)) revert ZeroAddress();
 
         userTaxData[user] = TaxData({
             totalDeposits: deposits,
             totalWithdrawals: withdrawals,
-            yieldEarned: yield,
+            yieldEarned: yieldAmount,
             lastUpdated: block.timestamp,
             exists: true
         });
 
-        emit TaxDataUpdated(user, deposits, withdrawals, yield);
+        emit TaxDataUpdated(user, deposits, withdrawals, yieldAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
