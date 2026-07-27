@@ -121,7 +121,7 @@ The Swiss DeFi Yield Optimizer is a modular DeFi vault system built on Ethereum,
 **State Variables**:
 ```solidity
 address public strategy;           // Active yield strategy
-uint256 public maxDeposit;        // Maximum deposit limit
+uint256 public depositCap;        // Per-call deposit cap, read via maxDeposit(address)
 uint256 public totalAllocated;    // Assets in strategy
 uint256 public lastHarvest;       // Last harvest timestamp
 bool public emergencyShutdown;    // Emergency flag
@@ -132,6 +132,8 @@ bool public emergencyShutdown;    // Emergency flag
 - `withdraw(assets, receiver, owner)`: Burn shares, receive USDC
 - `mint(shares, receiver)`: Mint specific amount of shares
 - `redeem(shares, receiver, owner)`: Redeem shares for assets
+- `maxDeposit(receiver)`: ERC-4626 limit — the deposit cap, or 0 during shutdown
+- `setDepositCap(amount)`: Set the per-call deposit cap (owner only)
 - `setStrategy(address)`: Set active strategy (owner only)
 - `allocateToStrategy(amount)`: Allocate funds to strategy
 - `triggerEmergencyShutdown()`: Halt deposits in emergency
@@ -218,7 +220,7 @@ getPriceFeedInfo(priceFeed) returns (price, decimals, updatedAt, description)
 3. Vault validates
    ├─> Check: not emergency shutdown
    ├─> Check: amount > 0
-   ├─> Check: amount <= maxDeposit
+   ├─> Check: amount <= maxDeposit(receiver)
    └─> Check: receiver != zero address
 
 4. Vault calculates shares
@@ -304,7 +306,7 @@ getPriceFeedInfo(priceFeed) returns (price, decimals, updatedAt, description)
 - Custom errors for gas efficiency
 
 **Layer 2: Economic Security**
-- maxDeposit limits
+- Deposit cap limits (`depositCap` / `maxDeposit(address)`)
 - Emergency shutdown capability
 - Strategy allocation controls
 - Time-locked harvests (MIN_HARVEST_DELAY)

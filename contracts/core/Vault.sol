@@ -35,8 +35,11 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     /// @notice Address of the active yield strategy
     address public strategy;
 
-    /// @notice Maximum deposit limit per user (0 = no limit)
-    uint256 public maxDeposit;
+    /// @notice Maximum assets accepted in a single deposit call (0 = deposits disabled)
+    /// @dev Renamed from `maxDeposit` so it no longer shadows the ERC-4626
+    ///      `maxDeposit(address)` entry point. Read the standard function for
+    ///      the effective limit; this is the raw configured cap.
+    uint256 public depositCap;
 
     /// @notice Total assets allocated to strategy
     uint256 public totalAllocated;
@@ -63,8 +66,8 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     /// @notice Emitted when assets are withdrawn from strategy
     event AssetsWithdrawn(uint256 amount, uint256 totalAllocated);
 
-    /// @notice Emitted when max deposit is updated
-    event MaxDepositUpdated(uint256 oldMax, uint256 newMax);
+    /// @notice Emitted when the deposit cap is updated
+    event DepositCapUpdated(uint256 oldCap, uint256 newCap);
 
     /// @notice Emitted when emergency shutdown is triggered
     event EmergencyShutdown(address indexed caller);
@@ -77,7 +80,7 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     error ZeroAddress();
-    error ExceedsMaxDeposit();
+    error ExceedsDepositCap();
     error EmergencyShutdownActive();
     error HarvestTooSoon();
     error InsufficientBalance();
@@ -101,7 +104,7 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
         if (address(asset_) == address(0)) revert ZeroAddress();
 
         // Set reasonable defaults
-        maxDeposit = type(uint256).max; // No limit initially
+        depositCap = type(uint256).max; // No limit initially
         lastHarvest = block.timestamp;
     }
 
@@ -121,7 +124,9 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     ) public override nonReentrant returns (uint256 shares) {
         if (emergencyShutdown) revert EmergencyShutdownActive();
         if (assets == 0) revert InvalidAmount();
-        if (assets > maxDeposit) revert ExceedsMaxDeposit();
+        // Enforce the limit through the ERC-4626 entry point so the advertised
+        // maximum and the enforced maximum can never drift apart.
+        if (assets > maxDeposit(receiver)) revert ExceedsDepositCap();
         if (receiver == address(0)) revert ZeroAddress();
 
         shares = super.deposit(assets, receiver);
@@ -214,6 +219,19 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
         return IERC20(asset()).balanceOf(address(this)) + totalAllocated;
     }
 
+    /**
+     * @notice Maximum amount of assets that can be deposited for `receiver`
+     *         in a single call without reverting
+     * @dev ERC-4626 override. Reflects both the configured deposit cap and the
+     *      emergency shutdown flag, per EIP-4626: when deposits are disabled
+     *      (even temporarily) this MUST return 0. MUST NOT revert.
+     * @return Maximum depositable assets
+     */
+    function maxDeposit(address) public view override returns (uint256) {
+        if (emergencyShutdown) return 0;
+        return depositCap;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         STRATEGY MANAGEMENT
     //////////////////////////////////////////////////////////////*/
@@ -282,14 +300,16 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Update maximum deposit limit
-     * @param newMaxDeposit New maximum deposit amount (0 = no limit)
+     * @notice Update the per-call deposit cap
+     * @param newDepositCap New cap in asset units. 0 disables deposits
+     *        (`maxDeposit(address)` then returns 0); use type(uint256).max
+     *        for no limit.
      */
-    function setMaxDeposit(uint256 newMaxDeposit) external onlyOwner {
-        uint256 oldMax = maxDeposit;
-        maxDeposit = newMaxDeposit;
+    function setDepositCap(uint256 newDepositCap) external onlyOwner {
+        uint256 oldCap = depositCap;
+        depositCap = newDepositCap;
 
-        emit MaxDepositUpdated(oldMax, newMaxDeposit);
+        emit DepositCapUpdated(oldCap, newDepositCap);
     }
 
     /**

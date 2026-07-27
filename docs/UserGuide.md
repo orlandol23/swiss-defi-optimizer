@@ -412,14 +412,15 @@ await usdcContract.approve(vaultAddress, ethers.MaxUint256);
 - Wait for owner to resolve issue
 - Monitor official channels
 
-#### "Exceeds Max Deposit"
+#### "Exceeds Deposit Cap"
 
-**Problem**: Deposit amount > maxDeposit limit
+**Problem**: Deposit amount > the vault's current deposit limit
 
 **Solution**:
 ```javascript
-// Check current limit
-const maxDep = await vaultContract.maxDeposit();
+// Check current limit via the ERC-4626 entry point.
+// Returns 0 while emergency shutdown is active.
+const maxDep = await vaultContract.maxDeposit(userAddress);
 
 // Deposit within limit
 await vaultContract.deposit(maxDep, userAddress);
