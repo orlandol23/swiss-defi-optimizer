@@ -40,13 +40,6 @@ jobs:
       run: npm run coverage
       continue-on-error: true
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage/lcov.info
-        fail_ci_if_error: false
-      continue-on-error: true
-
     - name: Check contract sizes
       run: npm run size
       continue-on-error: true
