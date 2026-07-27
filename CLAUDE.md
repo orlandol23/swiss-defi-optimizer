@@ -22,7 +22,7 @@ honest about that; do not describe unbuilt work as if it exists.
 ```bash
 npm install
 npm run compile      # hardhat compile
-npm test             # hardhat test — 46 tests
+npm test             # hardhat test — 60 tests
 npm run coverage     # solidity-coverage
 npm run size         # contract sizes
 ```
