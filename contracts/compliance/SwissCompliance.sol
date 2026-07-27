@@ -105,7 +105,7 @@ contract SwissCompliance is Ownable {
      *      - Jurisdiction restrictions
      *      - Transaction limits
      */
-    function isCompliant(address user) external view returns (bool compliant) {
+    function isCompliant(address user) external pure returns (bool compliant) {
         // Mock: For demo, we accept all addresses
         // In production, would check KYC status, sanctions lists, etc.
         return user != address(0);

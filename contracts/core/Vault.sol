@@ -146,6 +146,10 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     ) public override nonReentrant returns (uint256 assets) {
         if (emergencyShutdown) revert EmergencyShutdownActive();
         if (shares == 0) revert InvalidAmount();
+        // Enforce the limit through the ERC-4626 entry point so the advertised
+        // maximum and the enforced maximum can never drift apart. Without this
+        // the deposit cap was bypassable by entering through mint().
+        if (shares > maxMint(receiver)) revert ExceedsDepositCap();
         if (receiver == address(0)) revert ZeroAddress();
 
         assets = super.mint(shares, receiver);
@@ -230,6 +234,28 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     function maxDeposit(address) public view override returns (uint256) {
         if (emergencyShutdown) return 0;
         return depositCap;
+    }
+
+    /**
+     * @notice Maximum amount of shares that can be minted for `receiver`
+     *         in a single call without reverting
+     * @dev ERC-4626 override, and the share-denominated mirror of
+     *      {maxDeposit}. The cap is configured in assets, so it is converted
+     *      here; an uncapped vault is reported as `type(uint256).max` directly
+     *      because converting that value would overflow.
+     *
+     *      Rounding is safe in the direction that matters: `convertToShares`
+     *      rounds down and `previewMint` rounds back up, so the assets pulled
+     *      for `maxMint()` shares never exceed the configured cap.
+     *
+     *      Like {maxDeposit}, this returns 0 during emergency shutdown and
+     *      MUST NOT revert, per EIP-4626.
+     * @return Maximum mintable shares
+     */
+    function maxMint(address) public view override returns (uint256) {
+        if (emergencyShutdown) return 0;
+        if (depositCap == type(uint256).max) return type(uint256).max;
+        return convertToShares(depositCap);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -623,4 +623,222 @@ describe("Vault", function () {
       expect(await vault.maxDeposit(ethers.ZeroAddress)).to.equal(0);
     });
   });
+
+  // Companion to the block above, for the mint() side of the same cap.
+  // maxDeposit(address) was fixed first; mint() kept going straight to
+  // super.mint() without consulting any limit, and maxMint(address) was left
+  // inherited, so it advertised type(uint256).max regardless of the cap. The
+  // deposit cap was therefore bypassable simply by entering through mint().
+  describe("ERC-4626 conformance: maxMint(address) and mint()", function () {
+    it("Should not expose a zero-argument maxMint() alongside the standard one", async function () {
+      const { vault } = await loadFixture(deployVaultFixture);
+
+      const overloads = vault.interface.fragments.filter(
+        (f: any) => f.type === "function" && f.name === "maxMint"
+      );
+
+      expect(overloads).to.have.lengthOf(1);
+      expect((overloads[0] as any).inputs).to.have.lengthOf(1);
+      expect((overloads[0] as any).inputs[0].type).to.equal("address");
+    });
+
+    it("Should report the uncapped default through the standard function", async function () {
+      const { vault, user1 } = await loadFixture(deployVaultFixture);
+
+      // Converting type(uint256).max would overflow, so an uncapped vault
+      // reports the sentinel directly.
+      expect(await vault.maxMint(user1.address)).to.equal(ethers.MaxUint256);
+    });
+
+    it("Should report the configured cap, converted to shares", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      const cap = ethers.parseUnits("100", 6);
+      await vault.connect(owner).setDepositCap(cap);
+
+      expect(await vault.maxMint(user1.address)).to.equal(
+        await vault.convertToShares(cap)
+      );
+    });
+
+    it("Should return 0 while emergency shutdown is active", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(ethers.parseUnits("100", 6));
+      await vault.connect(owner).triggerEmergencyShutdown();
+
+      // Mirrors maxDeposit: if minting is disabled, maxMint MUST return 0.
+      expect(await vault.maxMint(user1.address)).to.equal(0);
+    });
+
+    it("Should accept a mint of exactly maxMint(receiver)", async function () {
+      const { vault, usdc, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(ethers.parseUnits("100", 6));
+
+      const limit = await vault.maxMint(user1.address);
+      await usdc
+        .connect(user1)
+        .approve(await vault.getAddress(), await vault.previewMint(limit));
+
+      await expect(vault.connect(user1).mint(limit, user1.address)).to.not.be
+        .reverted;
+    });
+
+    it("Should reject a mint of maxMint(receiver) + 1", async function () {
+      const { vault, usdc, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(ethers.parseUnits("100", 6));
+
+      const overLimit = (await vault.maxMint(user1.address)) + 1n;
+      await usdc
+        .connect(user1)
+        .approve(await vault.getAddress(), await vault.previewMint(overLimit));
+
+      await expect(
+        vault.connect(user1).mint(overLimit, user1.address)
+      ).to.be.revertedWithCustomError(vault, "ExceedsDepositCap");
+    });
+
+    it("Should not let mint() bypass the deposit cap that deposit() enforces", async function () {
+      const { vault, usdc, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      const cap = ethers.parseUnits("100", 6);
+      await vault.connect(owner).setDepositCap(cap);
+
+      // The exact regression: an amount of assets deposit() refuses must not
+      // become reachable by converting it to shares and calling mint().
+      const overCap = cap + ethers.parseUnits("1", 6);
+      const sharesForOverCap = await vault.convertToShares(overCap);
+
+      await usdc.connect(user1).approve(await vault.getAddress(), overCap * 2n);
+
+      await expect(
+        vault.connect(user1).deposit(overCap, user1.address)
+      ).to.be.revertedWithCustomError(vault, "ExceedsDepositCap");
+
+      await expect(
+        vault.connect(user1).mint(sharesForOverCap, user1.address)
+      ).to.be.revertedWithCustomError(vault, "ExceedsDepositCap");
+    });
+
+    it("Should never pull more assets than the cap for maxMint() shares", async function () {
+      const { vault, usdc, owner, user1, user2 } = await loadFixture(
+        deployVaultFixture
+      );
+
+      // Move the exchange rate off 1:1 so the share/asset conversion actually
+      // rounds, then confirm the rounding cannot round *up* through the cap.
+      await usdc
+        .connect(user1)
+        .approve(await vault.getAddress(), ethers.parseUnits("300", 6));
+      await vault
+        .connect(user1)
+        .deposit(ethers.parseUnits("300", 6), user1.address);
+      await usdc
+        .connect(user2)
+        .transfer(await vault.getAddress(), ethers.parseUnits("77", 6));
+
+      for (const raw of ["1", "13", "100", "999"]) {
+        const cap = ethers.parseUnits(raw, 6);
+        await vault.connect(owner).setDepositCap(cap);
+
+        const limit = await vault.maxMint(user2.address);
+        expect(await vault.previewMint(limit)).to.be.lte(cap);
+      }
+    });
+
+    it("Should never revert, per EIP-4626, even with a zero cap", async function () {
+      const { vault, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).setDepositCap(0);
+
+      expect(await vault.maxMint(user1.address)).to.equal(0);
+      expect(await vault.maxMint(ethers.ZeroAddress)).to.equal(0);
+    });
+  });
+
+  // The withdrawal side is deliberately NOT capped and deliberately stays open
+  // during emergency shutdown — the shutdown blocks new deposits only. These
+  // tests pin that intent down so a future "consistency" change cannot quietly
+  // trap depositors' funds.
+  describe("ERC-4626 conformance: maxWithdraw / maxRedeem", function () {
+    it("Should report the holder's full balance", async function () {
+      const { vault, usdc, user1 } = await loadFixture(deployVaultFixture);
+
+      const assets = ethers.parseUnits("250", 6);
+      await usdc.connect(user1).approve(await vault.getAddress(), assets);
+      await vault.connect(user1).deposit(assets, user1.address);
+
+      expect(await vault.maxRedeem(user1.address)).to.equal(
+        await vault.balanceOf(user1.address)
+      );
+      expect(await vault.maxWithdraw(user1.address)).to.equal(
+        await vault.convertToAssets(await vault.balanceOf(user1.address))
+      );
+    });
+
+    it("Should stay open during emergency shutdown", async function () {
+      const { vault, usdc, owner, user1 } = await loadFixture(deployVaultFixture);
+
+      const assets = ethers.parseUnits("250", 6);
+      await usdc.connect(user1).approve(await vault.getAddress(), assets);
+      await vault.connect(user1).deposit(assets, user1.address);
+
+      await vault.connect(owner).triggerEmergencyShutdown();
+
+      // Withdrawals remain allowed, so these must NOT drop to 0.
+      expect(await vault.maxRedeem(user1.address)).to.be.gt(0);
+      expect(await vault.maxWithdraw(user1.address)).to.be.gt(0);
+
+      await expect(
+        vault
+          .connect(user1)
+          .redeem(
+            await vault.maxRedeem(user1.address),
+            user1.address,
+            user1.address
+          )
+      ).to.not.be.reverted;
+    });
+
+    it("Should not revert for an address holding nothing", async function () {
+      const { vault, user2 } = await loadFixture(deployVaultFixture);
+
+      expect(await vault.maxWithdraw(user2.address)).to.equal(0);
+      expect(await vault.maxRedeem(user2.address)).to.equal(0);
+      expect(await vault.maxWithdraw(ethers.ZeroAddress)).to.equal(0);
+      expect(await vault.maxRedeem(ethers.ZeroAddress)).to.equal(0);
+    });
+  });
+
+  // EIP-4626: preview functions MUST NOT revert because of vault-specific
+  // user or global limits. They answer "what would this trade give me", which
+  // stays meaningful even when the cap would refuse the trade.
+  describe("ERC-4626 conformance: preview functions ignore the cap", function () {
+    it("Should quote amounts above the deposit cap without reverting", async function () {
+      const { vault, owner } = await loadFixture(deployVaultFixture);
+
+      const cap = ethers.parseUnits("100", 6);
+      await vault.connect(owner).setDepositCap(cap);
+
+      const overCap = cap * 10n;
+      expect(await vault.previewDeposit(overCap)).to.be.gt(0);
+      expect(await vault.previewMint(await vault.convertToShares(overCap))).to.be.gt(
+        0
+      );
+    });
+
+    it("Should quote without reverting while emergency shutdown is active", async function () {
+      const { vault, owner } = await loadFixture(deployVaultFixture);
+
+      await vault.connect(owner).triggerEmergencyShutdown();
+
+      const assets = ethers.parseUnits("10", 6);
+      expect(await vault.previewDeposit(assets)).to.be.gt(0);
+      expect(await vault.previewMint(assets)).to.be.gt(0);
+      expect(await vault.previewWithdraw(assets)).to.be.gt(0);
+      expect(await vault.previewRedeem(assets)).to.be.gt(0);
+    });
+  });
 });
