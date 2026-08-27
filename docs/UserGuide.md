@@ -1,5 +1,13 @@
 # Swiss DeFi Optimizer - User Guide
 
+> **⚠️ Scope note (2026-08):** this guide describes the **planned** product.
+> Today the repository contains smart contracts and tests only — there is no
+> web interface, no deployment, and no yield strategy integration, and the
+> vault does not call SwissCompliance. Every "Via Web Interface" flow below
+> is design intent; the only way to interact with the contracts today is
+> directly (Hardhat console / Etherscan on a deployment you make yourself).
+> See `README.md` for the honest current scope.
+
 ## Table of Contents
 
 1. [Introduction](#introduction)
@@ -212,8 +220,10 @@ const shares = await vaultContract.balanceOf(yourAddress);
 // Convert to USDC value
 const assets = await vaultContract.convertToAssets(shares);
 
-// CHF equivalent (via SwissCompliance)
-const chfValue = await complianceContract.convertUsdToChf(assets);
+// CHF-side figures come from the compliance contract's own reports —
+// USD→CHF conversion happens internally (Chainlink CHF/USD feed); there is
+// no public convertUsdToChf function:
+const report = await complianceContract.getTaxReport(yourAddress);
 ```
 
 ## Tax Reporting
@@ -377,7 +387,8 @@ Declaration Deadline: March 31, 2025
 **Emergency Shutdown**:
 - Owner can halt new deposits
 - Withdrawals always allowed
-- Temporary measure for security
+- **One-way**: `triggerEmergencyShutdown` has no resume function — once
+  triggered, the vault stays in withdrawal-only mode permanently
 
 **Strategy Changes**:
 - Owner can change strategies
