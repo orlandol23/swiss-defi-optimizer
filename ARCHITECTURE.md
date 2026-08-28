@@ -2,6 +2,11 @@
 
 > Status: proposta inicial. Decisões marcadas com `[DECISÃO]` ainda estão
 > abertas — comentar antes da implementação.
+>
+> **Nota (2026-08):** esta proposta (stack Next.js/wagmi com frontend) **não
+> é o escopo atual do repositório**, que hoje é contracts-only (Hardhat; ver
+> `README.md`, `CLAUDE.md` e `docs/Architecture.md`). Mantida como proposta;
+> nada aqui descreve código existente.
 
 ---
 

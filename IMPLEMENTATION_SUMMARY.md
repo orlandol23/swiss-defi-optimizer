@@ -1,5 +1,12 @@
 # Swiss DeFi Optimizer - Implementation Summary
 
+> **📜 Historical document (written 2025-11-18, before the first successful
+> compile).** Kept for the record; several statements below no longer hold:
+> the contracts compile and **73 tests pass** (see `TESTING_GUIDE.md`),
+> `npm run test:integration` / `test:security` were never added, and
+> Phases 2–3 (strategies, frontend) remain unbuilt. For the current state,
+> read `README.md` and `TESTING_GUIDE.md`.
+
 ## ✅ Completed Implementation
 
 ### Phase 1: Foundations (100% Complete)
@@ -669,9 +676,9 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Status**: Phase 1-3 Complete ✅
+**Status**: Phase 1 complete ✅ — Phases 2–3 (strategies, frontend) not started
 **Next**: Deployment to Sepolia when network accessible
-**Target**: Production-ready DeFi vault with Swiss compliance
+**Target**: demonstration-quality DeFi vault with mock Swiss compliance
 
 ---
 

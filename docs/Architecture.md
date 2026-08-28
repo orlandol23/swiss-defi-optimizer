@@ -1,5 +1,13 @@
 # Swiss DeFi Optimizer - Architecture Documentation
 
+> **⚠️ Scope note (2026-08):** this document describes the **planned** system.
+> What exists in the repository today is the smart-contract layer only
+> (Vault, SwissCompliance, PriceConverter and their tests): there is **no
+> frontend, no wallet integration and no external yield-protocol
+> integration**, and the vault does not call SwissCompliance. Every frontend
+> box and frontend data flow below is design intent, not shipped code. See
+> `README.md` for the honest current scope.
+
 ## System Overview
 
 The Swiss DeFi Yield Optimizer is a modular DeFi vault system built on Ethereum, implementing the ERC-4626 tokenized vault standard with Swiss regulatory compliance features.
