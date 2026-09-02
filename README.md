@@ -137,9 +137,21 @@ swiss-defi-optimizer/
 ├── scripts/
 │   ├── deploy.ts          # deployment script
 │   └── verify.ts          # Etherscan verification
-├── deployments/           # deployment addresses
-└── docs/                  # documentation
+├── deployments/           # deployment addresses (empty — nothing deployed yet)
+└── docs/
+    ├── ERC4626-CONFORMANCE.md   # the standard's rules, the two bugs, the tests that pin them
+    └── proposals/               # archived product proposals — NOT descriptions of this repo
 ```
+
+Documentation worth reading, in order: this README for scope,
+[`TESTING_GUIDE.md`](TESTING_GUIDE.md) for the suite, and
+[`docs/ERC4626-CONFORMANCE.md`](docs/ERC4626-CONFORMANCE.md) for the
+standard-conformance rules the vault has to hold to.
+
+`docs/proposals/` holds an earlier product vision (a multi-chain frontend
+dashboard) that was never built and is **not** the scope of this repository.
+It is kept for history, in a folder named so it cannot be mistaken for
+documentation of the code.
 
 ## Possible future work (not implemented)
 

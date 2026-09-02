@@ -44,6 +44,10 @@ contract changes.
 
 ## ERC-4626 conformance
 
+The rules below are the short form. `docs/ERC4626-CONFORMANCE.md` has the
+long form: the two bugs that produced them, why the old tests could not see
+them, and the tests that now pin each rule. Keep the two in agreement.
+
 `Vault` overrides the standard entry points. Two rules that previous bugs
 violated:
 
