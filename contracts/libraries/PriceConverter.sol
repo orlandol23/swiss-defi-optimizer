@@ -58,6 +58,9 @@ library PriceConverter {
 
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
 
+        // The unnamed round fields are deliberately unused; every field this
+        // library relies on is bound and validated below.
+        // slither-disable-next-line unused-return
         try feed.latestRoundData() returns (
             uint80 roundId,
             int256 answer,
@@ -130,6 +133,9 @@ library PriceConverter {
 
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
 
+        // Only `updatedAt` matters for staleness; the other fields are ignored
+        // on purpose.
+        // slither-disable-next-line unused-return
         try feed.latestRoundData() returns (
             uint80, /* roundId */
             int256, /* answer */
@@ -186,6 +192,9 @@ library PriceConverter {
 
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
 
+        // `startedAt` and `answeredInRound` are intentionally skipped; the three
+        // fields this view reports are all bound and validated.
+        // slither-disable-next-line unused-return
         (uint80 roundId, int256 answer, , uint256 timestamp, ) = feed
             .latestRoundData();
 

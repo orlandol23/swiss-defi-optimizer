@@ -317,12 +317,16 @@ contract SwissCompliance is Ownable {
     {
         // Simple conversion to string
         // In production, would use proper number formatting
+        // Zero is a formatting special case, not a balance comparison.
+        // slither-disable-next-line incorrect-equality
         if (amount == 0) return "0";
 
         bytes memory buffer = new bytes(78);
         uint256 i = 77;
 
         while (amount != 0) {
+            // `% 10` extracts the next decimal digit; no randomness is involved.
+            // slither-disable-next-line weak-prng
             buffer[i--] = bytes1(uint8(48 + (amount % 10)));
             amount /= 10;
         }
