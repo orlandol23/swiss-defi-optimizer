@@ -2,6 +2,7 @@
 
 > A Solidity DeFi vault (ERC-4626) with a *compliance* module inspired by Swiss tax rules and currency conversion through Chainlink oracles. **A smart contract project** (Hardhat + TypeScript) — there is no frontend.
 
+[![CI](https://github.com/orlandol23/swiss-defi-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/orlandol23/swiss-defi-optimizer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-blue)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-yellow)](https://hardhat.org/)
