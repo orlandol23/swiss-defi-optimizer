@@ -36,13 +36,15 @@ jobs:
       env:
         REPORT_GAS: false
 
-    - name: Generate coverage report
-      run: npm run coverage
-      continue-on-error: true
-
+    # `contractSizer.strict` is true in hardhat.config.ts, so a contract over
+    # the 24KB EIP-170 limit already fails the compile above. This step prints
+    # the table and fails on the same condition — it is a check, not a report.
     - name: Check contract sizes
       run: npm run size
-      continue-on-error: true
+
+    # Coverage is not run here: it lives in pr-checks.yml, where the report is
+    # posted on the pull request. Running it in this matrix would compile and
+    # execute the suite a third and fourth time for the same numbers.
 
     - name: Archive artifacts
       uses: actions/upload-artifact@v4
@@ -51,7 +53,6 @@ jobs:
         path: |
           artifacts/
           typechain-types/
-          coverage/
       if: always()
 
   lint:
@@ -83,10 +84,77 @@ jobs:
     - name: Run TypeScript checks
       run: npx tsc --noEmit
 
+  security:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Compile contracts
+      run: npm run compile
+
+    # Fails the job on medium and high impact findings; low and informational
+    # findings are printed but do not block (see slither.config.json). The
+    # compile above is what the analysis reads — hence ignore-compile.
+    - name: Slither
+      uses: crytic/slither-action@v0.4.1
+      with:
+        target: .
+        ignore-compile: true
+        fail-on: medium
+        slither-config: slither.config.json
+
+    # Runtime dependencies only; dev tooling never reaches a deployment.
+    #
+    # The level is `critical`, not `high`, on purpose: the production tree
+    # currently carries 6 high advisories, all of them inside
+    # @chainlink/contracts' transitive JavaScript dependencies (nested
+    # OpenZeppelin 4.x copies, patch-package/tmp, ws via ethers v5). No
+    # contract in this repository imports @chainlink/contracts — the
+    # AggregatorV3Interface used by PriceConverter is vendored in
+    # contracts/interfaces/ — so nothing this pipeline can do clears them, and
+    # gating at `high` would only mean a permanently red check. The advisories
+    # are still printed below. Dropping the unused dependency is the real fix;
+    # until then this step fails on anything critical.
+    - name: npm audit (runtime dependencies)
+      run: npm audit --omit=dev --audit-level=critical
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    # Moved here from security.yml, which has no pull_request trigger and so
+    # could never run this action.
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      with:
+        fail-on-severity: moderate
+
   gas-report:
     name: Gas Report
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
     - name: Checkout code
@@ -106,78 +174,48 @@ jobs:
       env:
         REPORT_GAS: true
 
+    - name: Upload gas report
+      uses: actions/upload-artifact@v4
+      with:
+        name: gas-report
+        path: gas-report.txt
+      if: always()
+
+    # Informational: posting the comment needs a writable token, which pull
+    # requests from forks do not get. The gas numbers themselves were produced
+    # by the step above, which is not allowed to fail; only the delivery of the
+    # comment is best-effort. The report is always in the artifact.
     - name: Comment PR with gas report
       uses: actions/github-script@v7
-      if: github.event_name == 'pull_request'
+      continue-on-error: true
       with:
         script: |
           const fs = require('fs');
-          try {
-            const gasReport = fs.readFileSync('gas-report.txt', 'utf8');
-            github.rest.issues.createComment({
+          const gasReport = fs.readFileSync('gas-report.txt', 'utf8');
+          const body = '## ⛽ Gas Report\n\n```\n' + gasReport + '\n```';
+
+          const comments = await github.rest.issues.listComments({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+
+          const previous = comments.data.find(
+            c => c.user.login === 'github-actions[bot]' && c.body.includes('⛽ Gas Report')
+          );
+
+          if (previous !== undefined) {
+            await github.rest.issues.updateComment({
+              comment_id: previous.id,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## ⛽ Gas Report\n\n```\n' + gasReport + '\n```'
+              body,
             });
-          } catch (error) {
-            console.log('Gas report file not found, skipping comment');
           }
-      continue-on-error: true
-
-  security:
-    name: Security Analysis
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20.x
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run npm audit
-      run: npm audit --audit-level=moderate
-      continue-on-error: true
-
-    - name: Install Slither
-      run: |
-        pip3 install slither-analyzer
-        pip3 install solc-select
-        solc-select install 0.8.20
-        solc-select use 0.8.20
-      continue-on-error: true
-
-    - name: Run Slither analysis
-      run: slither . --json slither-report.json || true
-      continue-on-error: true
-
-    - name: Upload Slither report
-      uses: actions/upload-artifact@v4
-      with:
-        name: slither-report
-        path: slither-report.json
-      if: always()
-      continue-on-error: true
-
-  summary:
-    name: Build Summary
-    runs-on: ubuntu-latest
-    needs: [build-and-test, lint]
-    if: always()
-
-    steps:
-    - name: Summary
-      run: |
-        echo "## 📊 Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Build and tests completed" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Type checking completed" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "See individual jobs for detailed results." >> $GITHUB_STEP_SUMMARY

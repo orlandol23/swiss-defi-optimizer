@@ -73,7 +73,9 @@ const config: HardhatUserConfig = {
     alphaSort: true,
     disambiguatePaths: false,
     runOnCompile: true,
-    strict: false,
+    // A contract over the EIP-170 limit fails the compile instead of merely
+    // printing a red number, so `npm run size` in CI is a check, not a report.
+    strict: true,
   },
 };
 

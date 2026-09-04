@@ -1,5 +1,8 @@
 name: Security Checks
 
+# The same two checks run in ci.yml on every push and pull request. They are
+# repeated on a schedule because advisories and detectors change without the
+# code changing: this workflow re-checks main against today's databases.
 on:
   schedule:
     # Run security checks daily at 2 AM UTC
@@ -26,17 +29,10 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run npm audit
-      run: |
-        npm audit --audit-level=high --json > npm-audit.json || true
-        cat npm-audit.json
-
-    - name: Upload npm audit results
-      uses: actions/upload-artifact@v4
-      with:
-        name: npm-audit-results
-        path: npm-audit.json
-      if: always()
+    # Same gate and same reasoning as the audit step in ci.yml — see the
+    # comment there for why the level is `critical` rather than `high`.
+    - name: npm audit (runtime dependencies)
+      run: npm audit --omit=dev --audit-level=critical
 
   slither-analysis:
     name: Slither Static Analysis
@@ -46,89 +42,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        python-version: '3.11'
+        node-version: 20.x
+        cache: 'npm'
 
-    - name: Install Slither
-      run: |
-        pip3 install slither-analyzer
-        pip3 install solc-select
-        solc-select install 0.8.20
-        solc-select use 0.8.20
+    - name: Install dependencies
+      run: npm ci
 
-    - name: Run Slither
-      run: |
-        slither . \
-          --json slither-output.json \
-          --checklist \
-          --markdown-root slither-report.md \
-          --filter-paths "node_modules|test" \
-          || true
+    - name: Compile contracts
+      run: npm run compile
 
-    - name: Upload Slither results
-      uses: actions/upload-artifact@v4
+    # Fails on medium and high impact findings; low and informational findings
+    # are printed but do not block (see slither.config.json).
+    - name: Slither
+      uses: crytic/slither-action@v0.4.1
       with:
-        name: slither-analysis
-        path: |
-          slither-output.json
-          slither-report.md
-      if: always()
-
-  mythril-analysis:
-    name: Mythril Analysis
-    runs-on: ubuntu-latest
-    continue-on-error: true
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install Mythril
-      run: pip3 install mythril
-
-    - name: Run Mythril on Vault
-      run: |
-        myth analyze contracts/core/Vault.sol \
-          --solc-json mythril-config.json \
-          --execution-timeout 300 \
-          || true
-      continue-on-error: true
-
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate
-
-  security-summary:
-    name: Security Summary
-    runs-on: ubuntu-latest
-    needs: [security-audit, slither-analysis]
-    if: always()
-
-    steps:
-    - name: Create summary
-      run: |
-        echo "## 🔒 Security Analysis Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Security checks completed. Review artifacts for detailed results." >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Checks performed:" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ NPM Audit" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Slither Static Analysis" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Mythril Analysis" >> $GITHUB_STEP_SUMMARY
+        target: .
+        ignore-compile: true
+        fail-on: medium
+        slither-config: slither.config.json
