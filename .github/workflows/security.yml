@@ -55,12 +55,17 @@ jobs:
       run: npm run compile
 
     # Fails on medium and high impact findings; low and informational findings
-    # are printed but do not block. The threshold is `fail_on` in
-    # slither.config.json, not the action's `fail-on` input, which v0.4.1
-    # accepts and then drops. See the longer note in ci.yml.
-    - name: Slither
-      uses: crytic/slither-action@v0.4.1
+    # are printed and do not block. Installed from pip at a pinned version
+    # instead of through crytic/slither-action, whose Python 3.9 image can
+    # only resolve a release that ignores the threshold. See the longer note
+    # in ci.yml.
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        target: .
-        ignore-compile: true
-        slither-config: slither.config.json
+        python-version: '3.11'
+
+    - name: Install Slither
+      run: pip install slither-analyzer==0.11.6
+
+    - name: Slither
+      run: slither . --hardhat-ignore-compile --config-file slither.config.json --fail-medium

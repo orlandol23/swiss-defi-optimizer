@@ -104,21 +104,30 @@ jobs:
     - name: Compile contracts
       run: npm run compile
 
-    # Fails the job on medium and high impact findings; low and informational
-    # findings are printed but do not block. The threshold is `fail_on` in
-    # slither.config.json, NOT the action's `fail-on` input: v0.4.1 accepts
-    # that input and then invokes the analyzer without it, so the run falls
-    # back to Slither's own default, which fails on any finding at all. The
-    # config file is read by the action and by a local run alike, and it wins
-    # over the command line, so the gate is the same in both places.
-    #
-    # The compile above is what the analysis reads, hence ignore-compile.
-    - name: Slither
-      uses: crytic/slither-action@v0.4.1
+    # Slither runs from a pinned pip install rather than through
+    # crytic/slither-action. The action analyses inside a Python 3.9 image,
+    # and slither-analyzer requires 3.10 or newer from 0.11.5 on, so pip
+    # resolves down to 0.11.4 in there. That release ignores the medium
+    # threshold from the config file and from the command line alike and
+    # fails on any finding at all, which is what turned five informational
+    # and low results into a red job while the gate that was meant to be
+    # armed never was. Bump the pin deliberately, and re-check the threshold
+    # still holds when you do.
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        target: .
-        ignore-compile: true
-        slither-config: slither.config.json
+        python-version: '3.11'
+
+    - name: Install Slither
+      run: pip install slither-analyzer==0.11.6
+
+    # Fails the job on medium and high impact findings; low and informational
+    # findings are printed and do not block. The threshold is stated twice on
+    # purpose: `--fail-medium` here, and `fail_on` in slither.config.json so a
+    # local run without the flag gates the same way. The compile above is what
+    # the analysis reads, hence hardhat-ignore-compile.
+    - name: Slither
+      run: slither . --hardhat-ignore-compile --config-file slither.config.json --fail-medium
 
     # Runtime dependencies only; dev tooling never reaches a deployment.
     #
