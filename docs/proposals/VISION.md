@@ -4,10 +4,11 @@
 > feitas na ausência de um briefing escrito e devem ser confirmadas antes da
 > implementação.
 >
-> **Nota (2026-08):** esta visão descreve um produto (dashboard multi-chain
-> com frontend) que **não é o escopo atual do repositório** — hoje o repo é
-> contracts-only (ver `README.md` e `CLAUDE.md`). Mantida como proposta;
-> nada aqui descreve código existente.
+> **Nota (2026-09):** esta visão descreve um produto (dashboard multi-chain
+> com frontend) que **não é o escopo do repositório**, que é contracts-only.
+> Arquivada aqui em `docs/proposals/` justamente para não ser confundida com
+> documentação do que existe — nada neste arquivo descreve código presente no
+> repo. Para o estado real, ver [`../../README.md`](../../README.md).
 
 ---
 
