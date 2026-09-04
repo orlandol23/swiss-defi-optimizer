@@ -29,10 +29,10 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    # Same gate and same reasoning as the audit step in ci.yml — see the
-    # comment there for why the level is `critical` rather than `high`.
+    # Same gate and same reasoning as the audit step in ci.yml — runtime
+    # dependencies only, failing on anything high or above.
     - name: npm audit (runtime dependencies)
-      run: npm audit --omit=dev --audit-level=critical
+      run: npm audit --omit=dev --audit-level=high
 
   slither-analysis:
     name: Slither Static Analysis

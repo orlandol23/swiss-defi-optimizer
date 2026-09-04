@@ -72,17 +72,16 @@ npx hardhat --version
 
 # Check OpenZeppelin
 npm list @openzeppelin/contracts
-
-# Check Chainlink
-npm list @chainlink/contracts
 ```
 
 **Expected output:**
 ```
 Hardhat version 2.29.0 (or similar)
 @openzeppelin/contracts@5.0.2
-@chainlink/contracts@1.5.0
 ```
+
+There is no Chainlink package to check: `AggregatorV3Interface` is vendored in
+`contracts/interfaces/`, so `@chainlink/contracts` is not a dependency.
 
 ---
 

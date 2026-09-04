@@ -66,7 +66,7 @@ The project focuses on the **contract code and its tests**, as a DeFi/Solidity s
 
 - **Solidity:** ^0.8.20
 - **Framework:** Hardhat + TypeScript
-- **Libraries:** OpenZeppelin Contracts **v5.0.2** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20), Chainlink Contracts (price feeds)
+- **Libraries:** OpenZeppelin Contracts **v5.0.2** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20). Chainlink price feeds are the oracle design, but the only Chainlink code here is `AggregatorV3Interface`, vendored in `contracts/interfaces/` — the `@chainlink/contracts` package is not a dependency.
 - **Tests:** Hardhat Toolbox (Chai + matchers), `solidity-coverage`, `hardhat-gas-reporter`
 - **Typings:** TypeChain (contract typings for the tests/scripts)
 

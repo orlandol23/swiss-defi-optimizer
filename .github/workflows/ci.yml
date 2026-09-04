@@ -117,18 +117,13 @@ jobs:
 
     # Runtime dependencies only; dev tooling never reaches a deployment.
     #
-    # The level is `critical`, not `high`, on purpose: the production tree
-    # currently carries 6 high advisories, all of them inside
-    # @chainlink/contracts' transitive JavaScript dependencies (nested
-    # OpenZeppelin 4.x copies, patch-package/tmp, ws via ethers v5). No
-    # contract in this repository imports @chainlink/contracts — the
-    # AggregatorV3Interface used by PriceConverter is vendored in
-    # contracts/interfaces/ — so nothing this pipeline can do clears them, and
-    # gating at `high` would only mean a permanently red check. The advisories
-    # are still printed below. Dropping the unused dependency is the real fix;
-    # until then this step fails on anything critical.
+    # The gate is `high`. It used to be `critical`, because the unused
+    # @chainlink/contracts package dragged 6 high advisories in through its
+    # transitive JavaScript tree. That package is gone — PriceConverter uses
+    # the AggregatorV3Interface vendored in contracts/interfaces/ — and the
+    # runtime tree is now clean, so this step can hold the line at `high`.
     - name: npm audit (runtime dependencies)
-      run: npm audit --omit=dev --audit-level=critical
+      run: npm audit --omit=dev --audit-level=high
 
   dependency-review:
     name: Dependency Review
