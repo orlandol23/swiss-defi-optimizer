@@ -361,16 +361,26 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Harvest profits from strategy
-     * @dev Can only be called after MIN_HARVEST_DELAY
+     * @notice Placeholder harvest: records the time and reports zero profit
+     * @dev This function harvests nothing. It enforces {MIN_HARVEST_DELAY},
+     *      sets `lastHarvest` to now and emits {Harvest} with a profit of 0.
+     *      It never calls the strategy — {IStrategy} does not even declare a
+     *      harvest entry point — moves no assets, and leaves `totalAllocated`
+     *      and {totalAssets} untouched. No yield is realised or accounted for
+     *      by calling it, so read the {Harvest} event as a timestamp, not as a
+     *      profit report.
+     *
+     *      A real implementation would call the strategy, measure the assets
+     *      actually received and account for profit *and* loss. See "Known
+     *      limitations" in the README.
      */
     function harvest() external onlyOwner nonReentrant {
         if (block.timestamp < lastHarvest + MIN_HARVEST_DELAY) {
             revert HarvestTooSoon();
         }
 
-        // In production, this would call strategy.harvest()
-        // For now, we just update the timestamp
+        // Nothing to harvest from: the timestamp is the only state this
+        // placeholder owns.
         lastHarvest = block.timestamp;
 
         emit Harvest(0, block.timestamp);

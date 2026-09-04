@@ -153,6 +153,30 @@ dashboard) that was never built and is **not** the scope of this repository.
 It is kept for history, in a folder named so it cannot be mistaken for
 documentation of the code.
 
+## Known limitations
+
+Things the contracts do today that the names alone do not tell you.
+
+- **`harvest()` is a placeholder.** It enforces the one-hour delay, updates
+  `lastHarvest` and emits `Harvest(0, ...)`. It never calls the strategy —
+  `IStrategy` declares only `withdraw` — moves no assets and realises no yield.
+  The event is a timestamp, not a profit report.
+- **`totalAllocated` is never reconciled against the strategy's real balance.**
+  The vault tracks what it sent out and assumes it is all still there:
+  `totalAssets()` is the vault's own balance plus `totalAllocated`, and nothing
+  reads the strategy back. So a strategy that loses funds makes `totalAssets()`
+  overstate — every share price derived from it is then too high — and
+  `_withdrawFromStrategy` reverts with `InsufficientBalance` once the shortfall
+  is reached, which means `maxWithdraw`/`maxRedeem` can advertise more than the
+  vault can actually deliver. Loss accounting — reconciling against a
+  `strategy.balanceOf()` (which `IStrategy` would have to expose) or a reported
+  loss path — is future work.
+- **No `_decimalsOffset()` override.** First-depositor inflation protection is
+  whatever OpenZeppelin's default virtual offset of 0 gives, which is thin for
+  a 6-decimal asset like USDC. Raising the offset is the usual mitigation, but
+  it changes share maths for every depositor, so it is left as an open decision
+  rather than made quietly.
+
 ## Possible future work (not implemented)
 
 - Frontend (wallet + dashboard) — **does not exist in this repository**
