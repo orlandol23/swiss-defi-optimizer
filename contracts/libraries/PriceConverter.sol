@@ -48,11 +48,37 @@ library PriceConverter {
      * @param priceFeed Address of the Chainlink price feed
      * @return price Latest price with 8 decimals
      * @return decimals Number of decimals in the price
+     * @dev Thin wrapper over {_latestValidatedRound}: every read path in this
+     *      library goes through that one function, so they cannot disagree
+     *      about what counts as a valid, fresh round.
      */
     function getLatestPrice(address priceFeed)
         internal
         view
         returns (uint256 price, uint8 decimals)
+    {
+        (price, decimals, ) = _latestValidatedRound(priceFeed);
+    }
+
+    /**
+     * @notice Read the latest round and reject anything unusable
+     * @param priceFeed Address of the Chainlink price feed
+     * @return price Latest answer, cast to uint256
+     * @return decimals Number of decimals in the price
+     * @return updatedAt Timestamp of the round that produced `price`
+     * @dev The single validated read in this library. Reverts
+     *      `InvalidFeedAddress` on the zero address, `InvalidPrice` on a zero
+     *      round id, a non-positive answer or a feed that reverts, and
+     *      `StalePrice` on a missing or older-than-{MAX_STALENESS} timestamp.
+     *
+     *      `price` and `updatedAt` come out of the same call, so a caller that
+     *      reports both is reporting one round rather than two reads that a
+     *      misbehaving feed could answer differently.
+     */
+    function _latestValidatedRound(address priceFeed)
+        private
+        view
+        returns (uint256 price, uint8 decimals, uint256 updatedAt)
     {
         if (priceFeed == address(0)) revert InvalidFeedAddress();
 
@@ -65,21 +91,22 @@ library PriceConverter {
             uint80 roundId,
             int256 answer,
             uint256 /* startedAt */,
-            uint256 updatedAt,
+            uint256 timestamp,
             uint80 /* answeredInRound */
         ) {
             // Validate price data
             if (roundId == 0) revert InvalidPrice();
             if (answer <= 0) revert InvalidPrice();
-            if (updatedAt == 0) revert StalePrice();
+            if (timestamp == 0) revert StalePrice();
 
             // Check staleness
-            if (block.timestamp - updatedAt > MAX_STALENESS) {
+            if (block.timestamp - timestamp > MAX_STALENESS) {
                 revert StalePrice();
             }
 
             decimals = feed.decimals();
             price = uint256(answer);
+            updatedAt = timestamp;
         } catch {
             revert InvalidPrice();
         }
@@ -127,6 +154,12 @@ library PriceConverter {
      * @notice Check if price feed is stale
      * @param priceFeed Address of the Chainlink price feed
      * @return isStale True if price is stale
+     * @dev Reports the same staleness rule the reverting read paths enforce,
+     *      without reverting: a feed that cannot be read, and a round whose
+     *      `updatedAt` is 0, are both stale. `updatedAt == 0` means the feed
+     *      never published a round, which {_latestValidatedRound} rejects as
+     *      `StalePrice`; treating it as fresh here would have made this the
+     *      only path in the library that said yes to it.
      */
     function isPriceStale(address priceFeed) internal view returns (bool isStale) {
         if (priceFeed == address(0)) return true;
@@ -143,6 +176,9 @@ library PriceConverter {
             uint256 updatedAt,
             uint80 /* answeredInRound */
         ) {
+            // An unset timestamp is not a fresh price.
+            // slither-disable-next-line incorrect-equality
+            if (updatedAt == 0) return true;
             return block.timestamp - updatedAt > MAX_STALENESS;
         } catch {
             return true;
@@ -177,6 +213,17 @@ library PriceConverter {
      * @return decimals Price decimals
      * @return updatedAt Last update timestamp
      * @return description Feed description
+     * @dev Reads through {_latestValidatedRound}, so this reports exactly what
+     *      {getLatestPrice} would accept — same errors, same staleness rule.
+     *      It used to call the feed directly, skipping the staleness check and
+     *      letting a reverting feed bubble its own error up, which meant the
+     *      informational view was the one path that would happily report a
+     *      day-old price.
+     *
+     *      `description` goes through {getDescription}, which falls back to
+     *      "Unknown Feed" rather than reverting: the description is metadata,
+     *      and a feed that cannot name itself is not a reason to refuse a
+     *      price that validated.
      */
     function getPriceFeedInfo(address priceFeed)
         internal
@@ -188,23 +235,7 @@ library PriceConverter {
             string memory description
         )
     {
-        if (priceFeed == address(0)) revert InvalidFeedAddress();
-
-        AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
-
-        // `startedAt` and `answeredInRound` are intentionally skipped; the three
-        // fields this view reports are all bound and validated.
-        // slither-disable-next-line unused-return
-        (uint80 roundId, int256 answer, , uint256 timestamp, ) = feed
-            .latestRoundData();
-
-        if (roundId == 0) revert InvalidPrice();
-        if (answer <= 0) revert InvalidPrice();
-        if (timestamp == 0) revert StalePrice();
-
-        price = uint256(answer);
-        decimals = feed.decimals();
-        updatedAt = timestamp;
-        description = feed.description();
+        (price, decimals, updatedAt) = _latestValidatedRound(priceFeed);
+        description = getDescription(priceFeed);
     }
 }
