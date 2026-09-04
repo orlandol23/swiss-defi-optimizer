@@ -55,11 +55,12 @@ jobs:
       run: npm run compile
 
     # Fails on medium and high impact findings; low and informational findings
-    # are printed but do not block (see slither.config.json).
+    # are printed but do not block. The threshold is `fail_on` in
+    # slither.config.json, not the action's `fail-on` input, which v0.4.1
+    # accepts and then drops. See the longer note in ci.yml.
     - name: Slither
       uses: crytic/slither-action@v0.4.1
       with:
         target: .
         ignore-compile: true
-        fail-on: medium
         slither-config: slither.config.json

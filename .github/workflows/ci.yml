@@ -105,14 +105,19 @@ jobs:
       run: npm run compile
 
     # Fails the job on medium and high impact findings; low and informational
-    # findings are printed but do not block (see slither.config.json). The
-    # compile above is what the analysis reads — hence ignore-compile.
+    # findings are printed but do not block. The threshold is `fail_on` in
+    # slither.config.json, NOT the action's `fail-on` input: v0.4.1 accepts
+    # that input and then invokes the analyzer without it, so the run falls
+    # back to Slither's own default, which fails on any finding at all. The
+    # config file is read by the action and by a local run alike, and it wins
+    # over the command line, so the gate is the same in both places.
+    #
+    # The compile above is what the analysis reads, hence ignore-compile.
     - name: Slither
       uses: crytic/slither-action@v0.4.1
       with:
         target: .
         ignore-compile: true
-        fail-on: medium
         slither-config: slither.config.json
 
     # Runtime dependencies only; dev tooling never reaches a deployment.
@@ -125,23 +130,12 @@ jobs:
     - name: npm audit (runtime dependencies)
       run: npm audit --omit=dev --audit-level=high
 
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    # Moved here from security.yml, which has no pull_request trigger and so
-    # could never run this action.
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate
+  # A Dependency Review job used to sit here. The action answers
+  # "Dependency review is not supported on this repository" unless the
+  # Dependency graph is enabled under Settings, Code security, so the check
+  # could only ever be red. Runtime advisories are already gated by the
+  # npm audit step above, which needs no repository setting. Turn the
+  # Dependency graph on and this job is worth adding back.
 
   gas-report:
     name: Gas Report

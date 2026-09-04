@@ -1,4 +1,5 @@
 {
+  "fail_on": "medium",
   "filter_paths": "node_modules|test",
   "exclude_dependencies": true,
   "exclude_informational": false,
