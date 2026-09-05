@@ -1,34 +1,35 @@
-# Arquitetura — Swiss DeFi Optimizer
+# Architecture: Swiss DeFi Optimizer
 
-> Status: proposta inicial. Decisões marcadas com `[DECISÃO]` ainda estão
-> abertas — comentar antes da implementação.
+> Status: initial proposal. Decisions marked `[DECISION]` are still open,
+> comment before implementation.
 >
-> **Nota (2026-09):** esta proposta (stack Next.js/wagmi com frontend) **não
-> é o escopo do repositório**, que é contracts-only (Hardhat). Arquivada aqui
-> em `docs/proposals/` justamente para não ser confundida com documentação do
-> que existe — nada neste arquivo descreve código presente no repo. Para o
-> estado real, ver [`../../README.md`](../../README.md).
+> **Note (2026-09):** this proposal (a Next.js/wagmi stack with a frontend)
+> **is not the scope of this repository**, which is contracts-only
+> (Hardhat). Archived here in `docs/proposals/` precisely so it is not
+> mistaken for documentation of what exists: nothing in this file describes
+> code present in the repo. For the real state, see
+> [`../../README.md`](../../README.md).
 
 ---
 
-## 1. Stack escolhida
+## 1. Chosen stack
 
-| Camada | Tecnologia | Por quê |
+| Layer | Technology | Why |
 |---|---|---|
-| Framework | Next.js 15 (App Router) | SSR/SSG para landing, RSC para data fetching server-side de preços; rotas API para tarefas off-chain |
-| Linguagem | TypeScript (strict) | Type safety end-to-end, contratos tipados via wagmi codegen |
-| Web3 client | viem 2.x | API moderna, tree-shakeable, multicall nativo, melhor DX que ethers |
-| Wallet/hooks | wagmi 2.x | Padrão de facto para React + viem; lida com reconnect, chain switching |
-| UI | Tailwind + shadcn/ui | Velocidade de prototipagem, componentes acessíveis |
-| Estado server | TanStack Query (vem com wagmi) | Cache de leituras on-chain com invalidation por bloco |
-| Estado client | Zustand | Filtros de UI, preferências; leve, sem boilerplate de Redux |
-| Forms | react-hook-form + zod | Validação tipada em formulários de swap/migração |
-| Testes | Vitest + Playwright | Vitest para unit, Playwright para E2E com Anvil fork |
-| Lint/format | ESLint + Prettier + biome `[DECISÃO]` | Escolher um — biome só, ou ESLint+Prettier |
-| Package mgr | pnpm | Workspaces futuros (app + packages/contracts) |
+| Framework | Next.js 15 (App Router) | SSR/SSG for the landing page, RSC for server-side price data fetching; API routes for off-chain tasks |
+| Language | TypeScript (strict) | End-to-end type safety, typed contracts via wagmi codegen |
+| Web3 client | viem 2.x | Modern API, tree-shakeable, native multicall, better DX than ethers |
+| Wallet/hooks | wagmi 2.x | De facto standard for React + viem; handles reconnect, chain switching |
+| UI | Tailwind + shadcn/ui | Prototyping speed, accessible components |
+| Server state | TanStack Query (bundled with wagmi) | Caches on-chain reads with per-block invalidation |
+| Client state | Zustand | UI filters, preferences; lightweight, no Redux boilerplate |
+| Forms | react-hook-form + zod | Typed validation on swap/migration forms |
+| Tests | Vitest + Playwright | Vitest for unit tests, Playwright for E2E with an Anvil fork |
+| Lint/format | ESLint + Prettier + biome `[DECISION]` | Pick one: biome alone, or ESLint+Prettier |
+| Package manager | pnpm | Future workspaces (app + packages/contracts) |
 | Node | >= 20 LTS | App Router + Edge runtime |
 
-## 2. Estrutura de pastas (proposta)
+## 2. Folder structure (proposed)
 
 ```
 swiss-defi-optimizer/
@@ -36,107 +37,108 @@ swiss-defi-optimizer/
 │   └── web/                       # Next.js app
 │       ├── app/
 │       │   ├── (marketing)/       # Landing, /, /about
-│       │   ├── (app)/             # Área autenticada por wallet
-│       │   │   ├── dashboard/     # Posições agregadas
-│       │   │   ├── opportunities/ # Lista de yields
-│       │   │   ├── simulate/      # Simulador de migração
-│       │   │   └── tax/           # Exportação de relatório fiscal
+│       │   ├── (app)/             # Wallet-authenticated area
+│       │   │   ├── dashboard/     # Aggregated positions
+│       │   │   ├── opportunities/ # Yield list
+│       │   │   ├── simulate/      # Migration simulator
+│       │   │   └── tax/           # Tax report export
 │       │   └── api/
-│       │       ├── prices/        # Proxy/cache de CoinGecko
-│       │       └── apy/           # Snapshot de APYs (cron job)
+│       │       ├── prices/        # CoinGecko proxy/cache
+│       │       └── apy/           # APY snapshot (cron job)
 │       ├── components/
 │       ├── hooks/                 # useAavePositions, useMorphoMarkets, etc.
 │       ├── lib/
 │       │   ├── viem/              # Client config, chains, multicall helpers
 │       │   ├── wagmi/             # Config, connectors
 │       │   ├── protocols/         # Adapters: aave.ts, morpho.ts
-│       │   ├── tax/               # Cost basis FIFO, exportadores
+│       │   ├── tax/               # FIFO cost basis, exporters
 │       │   └── chf/               # XCHF/ZCHF helpers (rates, pools)
 │       └── tests/
 ├── packages/
-│   ├── contracts-abi/             # ABIs tipados (gerados via wagmi cli)
-│   └── shared/                    # Tipos compartilhados (Position, Opportunity)
-├── docs/                          # Decisões de arquitetura (ADRs)
+│   ├── contracts-abi/             # Typed ABIs (generated via wagmi cli)
+│   └── shared/                    # Shared types (Position, Opportunity)
+├── docs/                          # Architecture decisions (ADRs)
 ├── VISION.md
 ├── ARCHITECTURE.md
 └── README.md
 ```
 
-## 3. Camadas e responsabilidades
+## 3. Layers and responsibilities
 
 ```
 ┌──────────────────────────────────────────┐
 │  UI (RSC + Client Components)             │
-│  - Dashboard, formulários, gráficos        │
+│  - Dashboard, forms, charts                │
 └──────────────┬───────────────────────────┘
-               │ usa
+               │ uses
 ┌──────────────▼───────────────────────────┐
 │  Hooks (wagmi + custom)                   │
 │  - useAavePositions(address)              │
 │  - useMorphoMarkets(chainId)              │
 │  - useOptimizationSuggestions(positions)  │
 └──────────────┬───────────────────────────┘
-               │ usa
+               │ uses
 ┌──────────────▼───────────────────────────┐
-│  Protocol Adapters (puros, testáveis)     │
+│  Protocol Adapters (pure, testable)       │
 │  - lib/protocols/aave.ts                  │
 │  - lib/protocols/morpho.ts                │
-│  - Interface comum: getPositions, getAPY  │
+│  - Common interface: getPositions, getAPY │
 └──────────────┬───────────────────────────┘
-               │ usa
+               │ uses
 ┌──────────────▼───────────────────────────┐
-│  viem clients (1 por chain)               │
-│  - Multicall obrigatório p/ leituras em   │
-│    lote                                   │
+│  viem clients (1 per chain)                │
+│  - Multicall required for batch reads     │
 └──────────────────────────────────────────┘
 ```
 
-Princípios:
-- **Adapters são puros.** Recebem `PublicClient` e endereço; retornam
-  posições normalizadas. Sem React, sem hooks. Facilita teste com Anvil.
-- **Hooks são finos.** Apenas embrulham adapter em `useQuery` com chave
-  estável `[protocol, chain, address, blockTag]`.
-- **UI nunca fala com viem direto.** Sempre via hook.
+Principles:
+- **Adapters are pure.** They take a `PublicClient` and an address; they
+  return normalized positions. No React, no hooks. This makes testing with
+  Anvil easy.
+- **Hooks are thin.** They just wrap an adapter in `useQuery` with a stable
+  key `[protocol, chain, address, blockTag]`.
+- **UI never talks to viem directly.** Always through a hook.
 
-## 4. Integrações externas
+## 4. External integrations
 
-| Serviço | Uso | Plano |
+| Service | Use | Plan |
 |---|---|---|
-| RPCs | Leitura on-chain | Default: Ankr público; permitir RPC custom do usuário (campo em settings) |
-| CoinGecko Pro `[DECISÃO]` | Preços spot e histórico em CHF | Avaliar Coingecko vs CryptoCompare; ambos têm endpoint CHF nativo |
-| DeFiLlama Yields API | Cross-check de APYs | Gratuita, rate-limited |
-| Aave v3 subgraph | Histórico de juros | Hosted Service do The Graph |
-| Morpho Blue API | Markets e oráculos | Endpoint REST oficial |
-| Swiss FX rates | Fallback CHF/USD diário (fisco suíço usa SNB) | https://data.snb.ch (CSV diário, gratuito) |
+| RPCs | On-chain reads | Default: public Ankr; allow the user's own custom RPC (settings field) |
+| CoinGecko Pro `[DECISION]` | Spot and historical prices in CHF | Evaluate CoinGecko vs CryptoCompare; both have a native CHF endpoint |
+| DeFiLlama Yields API | Cross-check of APYs | Free, rate-limited |
+| Aave v3 subgraph | Interest history | The Graph's Hosted Service |
+| Morpho Blue API | Markets and oracles | Official REST endpoint |
+| Swiss FX rates | Daily CHF/USD fallback (the Swiss tax authorities use the SNB) | https://data.snb.ch (daily CSV, free) |
 
-## 5. Fluxo: "Dashboard inicial"
+## 5. Flow: "Initial dashboard"
 
-1. Usuário conecta wallet (wagmi connector).
-2. `useAccount()` retorna address + chainId.
-3. RSC dispara em paralelo:
+1. User connects wallet (wagmi connector).
+2. `useAccount()` returns address + chainId.
+3. RSC fires in parallel:
    - `getAavePositions(address, [1, 42161, 8453, 10])`
    - `getMorphoPositions(address, [1, 8453])`
    - `getNativeBalances(address, [1, 42161, 8453, 10])`
-4. Cada adapter faz **1 chamada multicall por chain** (não N chamadas).
-5. Resultados agregados em `Position[]` normalizado.
-6. Para cada `Position`, anexa preço CHF do bloco (via cache server-side).
-7. UI renderiza com total em CHF + por chain + por protocolo.
+4. Each adapter makes **1 multicall per chain** (not N calls).
+5. Results are aggregated into a normalized `Position[]`.
+6. For each `Position`, the block's CHF price is attached (via a
+   server-side cache).
+7. UI renders with a total in CHF, broken down by chain and by protocol.
 
-## 6. Fluxo: "Sugestão de otimização"
+## 6. Flow: "Optimization suggestion"
 
-1. Dado `Position[]` do usuário, para cada posição:
-   - Buscar APY atual da posição.
-   - Buscar APYs de pools alternativos para o mesmo asset.
-2. Diferença líquida = `apy_alvo − apy_atual − custo_swap − custo_bridge − gas`.
-3. Filtros de risco:
-   - TVL mínimo configurável (default 50M USD).
-   - Idade do pool (default >= 90 dias).
-   - Sem dependência de oráculo de baixa qualidade (whitelist).
-4. Top 5 sugestões mostradas com breakdown completo.
-5. Clicar em "Simular" abre rota detalhada (swap → bridge → deposit) sem
-   executar.
+1. Given the user's `Position[]`, for each position:
+   - Fetch the position's current APY.
+   - Fetch APYs of alternative pools for the same asset.
+2. Net difference = `target_apy - current_apy - swap_cost - bridge_cost - gas`.
+3. Risk filters:
+   - Configurable minimum TVL (default 50M USD).
+   - Pool age (default >= 90 days).
+   - No dependency on a low-quality oracle (whitelist).
+4. Top 5 suggestions shown with a full breakdown.
+5. Clicking "Simulate" opens the detailed route (swap -> bridge -> deposit)
+   without executing it.
 
-## 7. Modelo de dados (core)
+## 7. Data model (core)
 
 ```ts
 type ChainId = 1 | 10 | 8453 | 42161;
@@ -163,31 +165,31 @@ type Opportunity = {
 };
 ```
 
-## 8. Decisões abertas para discutir
+## 8. Open decisions to discuss
 
-1. **Monorepo (pnpm workspaces) vs single app?** Recomendo monorepo desde já,
-   pois prevejo `packages/contracts-abi` e provavelmente um `packages/sdk`
-   se abrirmos integração externa.
-2. **RSC pesado vs client-heavy?** Recomendo RSC para preços/APYs (cache de
-   servidor compartilhado entre usuários) e client para tudo que depende do
-   address conectado (privacidade).
-3. **Onde rodam os cron jobs de snapshot de APY?** Vercel Cron, GitHub
-   Actions, ou um worker dedicado?
-4. **Banco de dados?** v0 pode viver sem (tudo lido on-chain + cache em
-   memória). Quando adicionarmos histórico longo, Postgres (Neon/Supabase) +
-   um schema simples.
-5. **Auth?** Provavelmente nenhuma — sessão é o address conectado. Se
-   adicionarmos features pagas, SIWE (Sign-In With Ethereum).
+1. **Monorepo (pnpm workspaces) vs single app?** I recommend a monorepo from
+   the start, since I anticipate `packages/contracts-abi` and probably a
+   `packages/sdk` if we open up external integration.
+2. **Heavy RSC vs client-heavy?** I recommend RSC for prices/APYs (server
+   cache shared across users) and client-side for anything that depends on
+   the connected address (privacy).
+3. **Where do the APY snapshot cron jobs run?** Vercel Cron, GitHub Actions,
+   or a dedicated worker?
+4. **Database?** v0 can live without one (everything read on-chain plus
+   in-memory cache). When we add long-term history, Postgres
+   (Neon/Supabase) plus a simple schema.
+5. **Auth?** Probably none: the session is the connected address. If we add
+   paid features, SIWE (Sign-In With Ethereum).
 
-## 9. Roadmap incremental sugerido
+## 9. Suggested incremental roadmap
 
-| Sprint | Entrega |
+| Sprint | Deliverable |
 |---|---|
-| 0 | Scaffold Next.js + wagmi + viem; landing estática; conectar wallet |
-| 1 | Adapter Aave v3 + dashboard de posições (1 chain) |
-| 2 | Multi-chain (4 chains) com multicall |
-| 3 | Adapter Morpho Blue + comparador de APY |
-| 4 | Simulador de migração (sem executar) |
-| 5 | Preços em CHF + linha CHF agregada |
-| 6 | Exportador CSV para imposto suíço |
-| 7 | Polimento + beta fechado com 10 usuários |
+| 0 | Scaffold Next.js + wagmi + viem; static landing page; wallet connect |
+| 1 | Aave v3 adapter + positions dashboard (1 chain) |
+| 2 | Multi-chain (4 chains) with multicall |
+| 3 | Morpho Blue adapter + APY comparator |
+| 4 | Migration simulator (no execution) |
+| 5 | CHF prices + aggregated CHF line |
+| 6 | CSV exporter for Swiss taxes |
+| 7 | Polish + closed beta with 10 users |

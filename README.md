@@ -2,6 +2,7 @@
 
 > A Solidity DeFi vault (ERC-4626) with a *compliance* module inspired by Swiss tax rules and currency conversion through Chainlink oracles. **A smart contract project** (Hardhat + TypeScript) — there is no frontend.
 
+[![CI](https://github.com/orlandol23/swiss-defi-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/orlandol23/swiss-defi-optimizer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-blue)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-yellow)](https://hardhat.org/)
@@ -66,7 +67,7 @@ The project focuses on the **contract code and its tests**, as a DeFi/Solidity s
 
 - **Solidity:** ^0.8.20
 - **Framework:** Hardhat + TypeScript
-- **Libraries:** OpenZeppelin Contracts **v5.0.2** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20), Chainlink Contracts (price feeds)
+- **Libraries:** OpenZeppelin Contracts **v5.4.0** (ERC-4626, Ownable, ReentrancyGuard, SafeERC20) — the last 5.x release that still compiles under Solidity 0.8.20; 5.5.0 onwards requires ^0.8.24. Chainlink price feeds are the oracle design, but the only Chainlink code here is `AggregatorV3Interface`, vendored in `contracts/interfaces/` — the `@chainlink/contracts` package is not a dependency.
 - **Tests:** Hardhat Toolbox (Chai + matchers), `solidity-coverage`, `hardhat-gas-reporter`
 - **Typings:** TypeChain (contract typings for the tests/scripts)
 
@@ -152,6 +153,30 @@ standard-conformance rules the vault has to hold to.
 dashboard) that was never built and is **not** the scope of this repository.
 It is kept for history, in a folder named so it cannot be mistaken for
 documentation of the code.
+
+## Known limitations
+
+Things the contracts do today that the names alone do not tell you.
+
+- **`harvest()` is a placeholder.** It enforces the one-hour delay, updates
+  `lastHarvest` and emits `Harvest(0, ...)`. It never calls the strategy —
+  `IStrategy` declares only `withdraw` — moves no assets and realises no yield.
+  The event is a timestamp, not a profit report.
+- **`totalAllocated` is never reconciled against the strategy's real balance.**
+  The vault tracks what it sent out and assumes it is all still there:
+  `totalAssets()` is the vault's own balance plus `totalAllocated`, and nothing
+  reads the strategy back. So a strategy that loses funds makes `totalAssets()`
+  overstate — every share price derived from it is then too high — and
+  `_withdrawFromStrategy` reverts with `InsufficientBalance` once the shortfall
+  is reached, which means `maxWithdraw`/`maxRedeem` can advertise more than the
+  vault can actually deliver. Loss accounting — reconciling against a
+  `strategy.balanceOf()` (which `IStrategy` would have to expose) or a reported
+  loss path — is future work.
+- **No `_decimalsOffset()` override.** First-depositor inflation protection is
+  whatever OpenZeppelin's default virtual offset of 0 gives, which is thin for
+  a 6-decimal asset like USDC. Raising the offset is the usual mitigation, but
+  it changes share maths for every depositor, so it is left as an open decision
+  rather than made quietly.
 
 ## Possible future work (not implemented)
 

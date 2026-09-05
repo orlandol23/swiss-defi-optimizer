@@ -72,17 +72,16 @@ npx hardhat --version
 
 # Check OpenZeppelin
 npm list @openzeppelin/contracts
-
-# Check Chainlink
-npm list @chainlink/contracts
 ```
 
 **Expected output:**
 ```
 Hardhat version 2.29.0 (or similar)
-@openzeppelin/contracts@5.0.2
-@chainlink/contracts@1.5.0
+@openzeppelin/contracts@5.4.0
 ```
+
+There is no Chainlink package to check: `AggregatorV3Interface` is vendored in
+`contracts/interfaces/`, so `@chainlink/contracts` is not a dependency.
 
 ---
 
@@ -101,7 +100,7 @@ npm run compile
 
 **Expected output:**
 ```
-Compiled 19 Solidity files successfully (evm target: paris).
+Compiled 25 Solidity files successfully (evm target: paris).
 ```
 
 **Verify the compilation:**
@@ -159,7 +158,7 @@ npx hardhat test test/unit/Vault.test.ts --grep "Deposits"
       ✓ Should allow users to deposit USDC (XXms)
       ... (more tests)
 
-  73 passing (XXs)
+  87 passing (XXs)
 ```
 
 **Reading the results:**
@@ -198,19 +197,21 @@ npm run coverage
 ----------------------------|----------|----------|----------|----------|----------------|
 File                        |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 ----------------------------|----------|----------|----------|----------|----------------|
- compliance/                |        0 |        0 |        0 |        0 |                |
-  SwissCompliance.sol       |        0 |        0 |        0 |        0 |... 331,332,335 |
+ compliance/                |    27.59 |       40 |       60 |    40.91 |                |
+  SwissCompliance.sol       |    27.59 |       40 |       60 |    40.91 |... 335,336,339 |
  core/                      |    78.95 |    71.25 |    93.33 |    82.86 |                |
-  Vault.sol                 |    78.95 |    71.25 |    93.33 |    82.86 |... 317,319,321 |
+  Vault.sol                 |    78.95 |    71.25 |    93.33 |    82.86 |... 329,331,333 |
  interfaces/                |      100 |      100 |      100 |      100 |                |
   AggregatorV3Interface.sol |      100 |      100 |      100 |      100 |                |
   IStrategy.sol             |      100 |      100 |      100 |      100 |                |
- libraries/                 |        0 |        0 |        0 |        0 |                |
-  PriceConverter.sol        |        0 |        0 |        0 |        0 |... 197,198,199 |
- mocks/                     |       75 |      100 |       75 |       75 |                |
+ libraries/                 |       90 |    93.75 |    85.71 |    83.33 |                |
+  PriceConverter.sol        |       90 |    93.75 |    85.71 |    83.33 |... 150,184,205 |
+ mocks/                     |       60 |      100 |    61.11 |    73.08 |                |
   MockUSDC.sol              |       75 |      100 |       75 |       75 |             40 |
+  MockV3Aggregator.sol      |       60 |      100 |     62.5 |    81.25 |       47,59,65 |
+  PriceConverterHarness.sol |       50 |      100 |       50 |       50 |       47,54,61 |
 ----------------------------|----------|----------|----------|----------|----------------|
-All files                   |    42.11 |    46.72 |    48.57 |    39.87 |                |
+All files                   |    66.12 |    68.97 |       74 |    70.59 |                |
 ----------------------------|----------|----------|----------|----------|----------------|
 ```
 
@@ -388,7 +389,7 @@ npm run compile
 
 # ✅ Tests
 npm test
-# All must pass (73/73)
+# All must pass (87/87)
 
 # ✅ Coverage
 npm run coverage

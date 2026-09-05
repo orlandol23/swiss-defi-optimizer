@@ -1,0 +1,8 @@
+{
+  "fail_on": "medium",
+  "filter_paths": "node_modules|test",
+  "exclude_dependencies": true,
+  "exclude_informational": false,
+  "exclude_low": false,
+  "solc_disable_warnings": false
+}

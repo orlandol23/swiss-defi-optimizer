@@ -267,6 +267,9 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
      * @param newStrategy Address of the new strategy contract
      * @dev Only owner can call this function
      */
+    // The old strategy must be drained before `strategy` can point elsewhere, so the
+    // assignment is necessarily after that call; the call is owner-gated.
+    // slither-disable-next-line reentrancy-no-eth
     function setStrategy(address newStrategy) external onlyOwner {
         if (newStrategy == address(0)) revert ZeroAddress();
 
@@ -305,12 +308,21 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
      * @notice Withdraw assets from strategy
      * @param amount Amount to withdraw
      */
+    // Measuring the balance across the call is deliberate: the vault trusts the
+    // delta it observes, not what the owner-set strategy reports, and reverts
+    // unless the delta covers `amount`.
+    // slither-disable-next-line reentrancy-balance,reentrancy-no-eth
     function _withdrawFromStrategy(uint256 amount) internal {
         if (strategy == address(0)) revert ZeroAddress();
+        // A zero-amount withdrawal is a no-op, not a balance comparison.
+        // slither-disable-next-line incorrect-equality
         if (amount == 0) return;
         if (amount > totalAllocated) revert InsufficientBalance();
 
         uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
+        // The return value is ignored on purpose: `received` below is the
+        // authoritative amount, measured from the vault's own balance.
+        // slither-disable-next-line unused-return
         IStrategy(strategy).withdraw(amount);
         uint256 received = IERC20(asset()).balanceOf(address(this)) - balanceBefore;
 
@@ -349,16 +361,26 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Harvest profits from strategy
-     * @dev Can only be called after MIN_HARVEST_DELAY
+     * @notice Placeholder harvest: records the time and reports zero profit
+     * @dev This function harvests nothing. It enforces {MIN_HARVEST_DELAY},
+     *      sets `lastHarvest` to now and emits {Harvest} with a profit of 0.
+     *      It never calls the strategy — {IStrategy} does not even declare a
+     *      harvest entry point — moves no assets, and leaves `totalAllocated`
+     *      and {totalAssets} untouched. No yield is realised or accounted for
+     *      by calling it, so read the {Harvest} event as a timestamp, not as a
+     *      profit report.
+     *
+     *      A real implementation would call the strategy, measure the assets
+     *      actually received and account for profit *and* loss. See "Known
+     *      limitations" in the README.
      */
     function harvest() external onlyOwner nonReentrant {
         if (block.timestamp < lastHarvest + MIN_HARVEST_DELAY) {
             revert HarvestTooSoon();
         }
 
-        // In production, this would call strategy.harvest()
-        // For now, we just update the timestamp
+        // Nothing to harvest from: the timestamp is the only state this
+        // placeholder owns.
         lastHarvest = block.timestamp;
 
         emit Harvest(0, block.timestamp);
