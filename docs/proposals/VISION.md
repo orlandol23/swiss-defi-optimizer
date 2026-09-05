@@ -1,103 +1,107 @@
-# Swiss DeFi Optimizer — Visão de Produto
+# Swiss DeFi Optimizer, Product Vision
 
-> Status: rascunho inicial. As seções marcadas com `[A VALIDAR]` são suposições
-> feitas na ausência de um briefing escrito e devem ser confirmadas antes da
-> implementação.
+> Status: initial draft. Sections marked `[TO CONFIRM]` are assumptions made
+> in the absence of a written brief and must be confirmed before
+> implementation.
 >
-> **Nota (2026-09):** esta visão descreve um produto (dashboard multi-chain
-> com frontend) que **não é o escopo do repositório**, que é contracts-only.
-> Arquivada aqui em `docs/proposals/` justamente para não ser confundida com
-> documentação do que existe — nada neste arquivo descreve código presente no
-> repo. Para o estado real, ver [`../../README.md`](../../README.md).
+> **Note (2026-09):** this vision describes a product (multi-chain dashboard
+> with a frontend) that **is not the scope of this repository**, which is
+> contracts-only. Archived here in `docs/proposals/` precisely so it is not
+> mistaken for documentation of what exists: nothing in this file describes
+> code present in the repo. For the real state, see
+> [`../../README.md`](../../README.md).
 
 ---
 
-## 1. Pitch em uma linha
+## 1. One-line pitch
 
-Um otimizador de capital em DeFi com lente suíça: ajuda residentes e tesourarias
-na Suíça a alocar, monitorar e movimentar capital entre protocolos DeFi
-preservando exposição em CHF (XCHF, ZCHF/Frankencoin) e gerando relatórios
-compatíveis com a contabilidade suíça.
+A DeFi capital optimizer with a Swiss lens: helps residents and treasuries in
+Switzerland allocate, monitor and move capital across DeFi protocols while
+preserving CHF exposure (XCHF, ZCHF/Frankencoin) and generating reports
+compatible with Swiss accounting.
 
-## 2. Problema
+## 2. Problem
 
-- **Fragmentação de yield:** APYs e incentivos mudam diariamente entre Aave,
-  Compound, Morpho, Spark, Pendle, Curve, etc. Acompanhar manualmente é
-  inviável.
-- **Custo de câmbio CHF↔stable USD:** a maioria das pools de yield são USD-
-  denominadas; entrar/sair de CHF na cadeia certa, no momento certo, com a
-  rota certa (CoW Swap, 1inch, Uniswap v4) é não-trivial.
-- **Compliance suíço:** residentes pagam imposto sobre patrimônio (Vermögens-
-  steuer) e precisam declarar holdings em 31/12. Não há ferramenta DeFi-nativa
-  que produza o relatório no formato esperado pelos cantões.
-- **L2 sprawl:** capital fica preso na L1 enquanto o melhor APY está na Base
-  ou Arbitrum. Bridging consciente de custo/risco é manual.
+- **Yield fragmentation:** APYs and incentives change daily across Aave,
+  Compound, Morpho, Spark, Pendle, Curve, etc. Tracking this manually is not
+  viable.
+- **CHF <-> stable USD exchange cost:** most yield pools are USD-denominated;
+  entering/exiting CHF on the right chain, at the right time, via the right
+  route (CoW Swap, 1inch, Uniswap v4) is non-trivial.
+- **Swiss compliance:** residents pay wealth tax (Vermögenssteuer) and must
+  declare holdings on 31/12. There is no DeFi-native tool that produces the
+  report in the format the cantons expect.
+- **L2 sprawl:** capital sits idle on L1 while the best APY is on Base or
+  Arbitrum. Cost/risk-aware bridging is manual.
 
-## 3. Público-alvo `[A VALIDAR]`
+## 3. Target audience `[TO CONFIRM]`
 
-| Persona | Necessidade primária |
+| Persona | Primary need |
 |---|---|
-| Investidor cripto-nativo na Suíça | Maximizar APY mantendo exposição CHF parcial |
-| Família office / tesouraria de PME | Diversificar caixa em stable on-chain com trilha de auditoria |
-| Power user DeFi global | Dashboard cross-chain com execução one-click |
+| Crypto-native investor in Switzerland | Maximize APY while keeping partial CHF exposure |
+| Family office / SME treasury | Diversify cash into on-chain stables with an audit trail |
+| Global DeFi power user | Cross-chain dashboard with one-click execution |
 
-A v0 mira a **persona 1** porque é a mais fácil de alcançar (canais: X,
-Reddit r/SwissPersonalFinance, eventos Crypto Valley) e tolera UX rough.
+v0 targets **persona 1** because it is the easiest to reach (channels: X,
+Reddit r/SwissPersonalFinance, Crypto Valley events) and tolerates rough UX.
 
-## 4. Proposta de valor / diferencial
+## 4. Value proposition / differentiator
 
-O que **não** somos: mais um clone de Zapper/DeBank/DeFiLlama.
+What we are **not**: another Zapper/DeBank/DeFiLlama clone.
 
-O que **somos**:
-1. **CHF-first.** XCHF e ZCHF são cidadãos de primeira classe na UI, com pools
-   e rotas específicas pré-curadas.
-2. **Tax-aware.** Cada movimento é capturado para gerar o relatório anual
-   estilo Steuererklärung (CSV + PDF), com cost basis FIFO.
-3. **Opinionado, não agnóstico.** Recomenda rotas e protocolos com filtro de
-   risco (TVL mínimo, audit score, exposição a oráculo); não despeja 500
-   pools sem hierarquia.
-4. **Open-source e self-hostável.** O alvo são usuários que desconfiam de
-   custódia — todo o código roda no browser + RPC do usuário.
+What we **are**:
+1. **CHF-first.** XCHF and ZCHF are first-class citizens in the UI, with
+   pools and routes specifically pre-curated.
+2. **Tax-aware.** Every movement is captured to generate the annual
+   Steuererklärung-style report (CSV + PDF), with FIFO cost basis.
+3. **Opinionated, not agnostic.** Recommends routes and protocols with a
+   risk filter (minimum TVL, audit score, oracle exposure); does not dump
+   500 pools with no hierarchy.
+4. **Open source and self-hostable.** The target users distrust custody:
+   all the code runs in the browser plus the user's own RPC.
 
-## 5. Escopo do MVP (v0.1)
+## 5. MVP scope (v0.1)
 
-Incluído:
-- Conectar wallet via wagmi (MetaMask, WalletConnect, Rabby, Ledger).
-- Ler posições em Ethereum + Arbitrum + Base + Optimism via viem multicall.
-- Listar oportunidades de yield para: USDC, ETH, wstETH, XCHF, ZCHF.
-- Comparar APYs em Aave v3 e Morpho Blue (2 protocolos só, para focar).
-- Simular rota de migração: "tirar X de Aave-ETH e mover para Morpho-Base".
-- Exportar histórico de transações em CSV com colunas amigáveis ao fisco
-  suíço (data, tipo, ativo, qtd, valor CHF na data, contraparte).
+Included:
+- Connect wallet via wagmi (MetaMask, WalletConnect, Rabby, Ledger).
+- Read positions on Ethereum + Arbitrum + Base + Optimism via viem multicall.
+- List yield opportunities for: USDC, ETH, wstETH, XCHF, ZCHF.
+- Compare APYs on Aave v3 and Morpho Blue (2 protocols only, to stay
+  focused).
+- Simulate a migration route: "take X out of Aave-ETH and move it to
+  Morpho-Base".
+- Export transaction history as CSV with columns friendly to the Swiss tax
+  authorities (date, type, asset, quantity, CHF value on that date,
+  counterparty).
 
-Fora do escopo da v0:
-- Execução automática (apenas sugere; usuário assina e envia).
-- Estratégias alavancadas, perps, opções.
-- Cadeias não-EVM (Solana, Sui, Cosmos).
-- Multi-conta / multi-wallet em uma sessão.
-- Conta institucional com KYC.
+Out of scope for v0:
+- Automatic execution (only suggests; the user signs and sends).
+- Leveraged strategies, perps, options.
+- Non-EVM chains (Solana, Sui, Cosmos).
+- Multi-account / multi-wallet in one session.
+- Institutional account with KYC.
 
-## 6. Métricas de sucesso (3 meses pós-launch) `[A VALIDAR]`
+## 6. Success metrics (3 months post-launch) `[TO CONFIRM]`
 
-- 500 wallets únicas conectadas.
-- 50 usuários ativos semanais.
-- 10 relatórios fiscais gerados em janeiro 2027.
-- TVL "trackeado" (não custodiado) de USD 5M.
+- 500 unique wallets connected.
+- 50 weekly active users.
+- 10 tax reports generated in January 2027.
+- USD 5M in "tracked" (not custodied) TVL.
 
-## 7. Riscos principais
+## 7. Main risks
 
-| Risco | Mitigação |
+| Risk | Mitigation |
 |---|---|
-| Concorrência de Zapper/DeBank adicionar feature CHF | Velocidade no nicho fiscal + open source |
-| ZCHF/XCHF terem liquidez insuficiente | Listar pools com volume mínimo; alertar usuário |
-| Regulação suíça (FINMA) considerar "consultoria de investimento" | Disclaimer explícito; sem custódia; sem execução automática |
-| Custos de RPC ao escalar | Multicall agressivo; cache no edge; permitir RPC do usuário |
+| Zapper/DeBank adding a CHF feature as competition | Speed in the tax niche plus open source |
+| ZCHF/XCHF having insufficient liquidity | List pools with a minimum volume; warn the user |
+| Swiss regulation (FINMA) treating this as "investment advice" | Explicit disclaimer; no custody; no automatic execution |
+| RPC costs at scale | Aggressive multicall; edge caching; allow the user's own RPC |
 
-## 8. Premissas a validar com você
+## 8. Assumptions to validate with you
 
-1. O foco "suíço" é diferencial real ou só naming? (Se for só naming, o
-   produto vira commodity contra Zapper.)
-2. v0 deve ter wallet connect ou pode ser read-only por endereço (mais
-   simples, sem assinatura)?
-3. Open source desde o dia 1 ou privado até validar tração?
-4. Modelo de receita: gratuito + doações, fee no swap roteado, ou SaaS?
+1. Is the "Swiss" focus a real differentiator or just naming? (If it is just
+   naming, the product becomes a commodity against Zapper.)
+2. Should v0 have wallet connect, or can it be read-only by address (simpler,
+   no signature)?
+3. Open source from day 1, or private until traction is validated?
+4. Revenue model: free plus donations, a fee on routed swaps, or SaaS?
