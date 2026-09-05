@@ -17,6 +17,12 @@ on:
         default: true
         type: boolean
 
+# Least privilege by default. A job that needs to write (posting a PR comment,
+# for example) declares its own `permissions:`, which replaces this one for
+# that job rather than adding to it.
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to ${{ github.event.inputs.network }}

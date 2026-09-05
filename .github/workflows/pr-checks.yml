@@ -8,6 +8,12 @@ on:
 # in ci.yml, which also triggers on pull_request. This workflow holds the one
 # check that is worth running only on a pull request: coverage, whose value is
 # the report posted back on the PR.
+# Least privilege by default. A job that needs to write (posting a PR comment,
+# for example) declares its own `permissions:`, which replaces this one for
+# that job rather than adding to it.
+permissions:
+  contents: read
+
 jobs:
   test-coverage:
     name: Test Coverage
