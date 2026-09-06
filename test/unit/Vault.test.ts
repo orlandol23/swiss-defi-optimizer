@@ -499,15 +499,79 @@ describe("Vault", function () {
   });
 
   describe("Reentrancy Protection", function () {
-    it("Should prevent reentrancy on deposit", async function () {
-      // This test would require a malicious contract
-      // For now, we verify the modifier is in place
-      await loadFixture(deployVaultFixture);
+    // A strategy is chosen by the owner, but it still runs arbitrary code while
+    // the vault waits on it. These exercise a real attacker contract rather
+    // than asserting that a modifier is present in the source.
+    async function deployReenteringFixture() {
+      const base = await loadFixture(deployVaultFixture);
+      const { vault, usdc, owner, user1 } = base;
 
-      // The nonReentrant modifier should be applied to deposit
-      // We can't easily test this without a malicious contract
-      // But we've verified the code has the modifier
-      expect(true).to.be.true;
+      const Factory = await ethers.getContractFactory("ReenteringStrategy");
+      const attacker = await Factory.deploy(
+        await usdc.getAddress(),
+        await vault.getAddress()
+      );
+      await attacker.waitForDeployment();
+
+      // An honest depositor funds the vault, then the owner attaches the
+      // strategy and allocates everything to it.
+      const deposited = ethers.parseUnits("1000", 6);
+      await usdc.connect(user1).approve(await vault.getAddress(), deposited);
+      await vault.connect(user1).deposit(deposited, user1.address);
+      await vault.connect(owner).setStrategy(await attacker.getAddress());
+      await vault.connect(owner).allocateToStrategy(deposited);
+
+      return { ...base, attacker, deposited };
+    }
+
+    it("Should stop a strategy that re-enters deposit() during setStrategy", async function () {
+      const { vault, usdc, owner, user1, attacker, deposited } =
+        await loadFixture(deployReenteringFixture);
+
+      // Return 600 of the 1000 and cover the missing 400 by depositing the
+      // vault's own assets back in. Unguarded, the balance delta reads as the
+      // full 1000 and the strategy walks away holding 400 USDC worth of shares.
+      const returned = ethers.parseUnits("600", 6);
+      const reentered = ethers.parseUnits("400", 6);
+      await attacker.arm(returned, reentered);
+
+      const Factory = await ethers.getContractFactory("ReenteringStrategy");
+      const replacement = await Factory.deploy(
+        await usdc.getAddress(),
+        await vault.getAddress()
+      );
+      await replacement.waitForDeployment();
+
+      await expect(
+        vault.connect(owner).setStrategy(await replacement.getAddress())
+      ).to.be.reverted;
+
+      // Nothing moved: the strategy holds no shares and the depositor's claim
+      // is intact.
+      expect(await vault.balanceOf(await attacker.getAddress())).to.equal(0);
+      expect(await vault.balanceOf(user1.address)).to.equal(deposited);
+      expect(await vault.totalAllocated()).to.equal(deposited);
+    });
+
+    it("Should let an honest strategy be replaced", async function () {
+      const { vault, usdc, owner, user1, attacker, deposited } =
+        await loadFixture(deployReenteringFixture);
+
+      // Same path with no re-entry: returns everything, deposits nothing.
+      await attacker.arm(0, 0);
+
+      const Factory = await ethers.getContractFactory("ReenteringStrategy");
+      const replacement = await Factory.deploy(
+        await usdc.getAddress(),
+        await vault.getAddress()
+      );
+      await replacement.waitForDeployment();
+
+      await vault.connect(owner).setStrategy(await replacement.getAddress());
+
+      expect(await vault.totalAllocated()).to.equal(0);
+      expect(await vault.balanceOf(user1.address)).to.equal(deposited);
+      expect(await vault.balanceOf(await attacker.getAddress())).to.equal(0);
     });
   });
 

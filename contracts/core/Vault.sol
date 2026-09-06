@@ -130,6 +130,13 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
         if (receiver == address(0)) revert ZeroAddress();
 
         shares = super.deposit(assets, receiver);
+        // A deposit that rounds down to zero shares must revert rather than
+        // succeed: the assets are already in the vault at this point, so
+        // returning normally would hand the depositor nothing and quietly
+        // donate their balance to everyone else. This costs nothing to any
+        // depositor who receives shares, and it is a separate concern from the
+        // virtual-offset arithmetic that decides how many shares that is.
+        if (shares == 0) revert InvalidAmount();
 
         return shares;
     }
@@ -267,10 +274,15 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
      * @param newStrategy Address of the new strategy contract
      * @dev Only owner can call this function
      */
-    // The old strategy must be drained before `strategy` can point elsewhere, so the
-    // assignment is necessarily after that call; the call is owner-gated.
+    // The old strategy must be drained before `strategy` can point elsewhere, so
+    // the assignment is necessarily after that external call. `nonReentrant` is
+    // what makes that ordering safe, and it is not optional: being owner-gated
+    // says nothing about what the strategy being called does with control while
+    // it holds it. Without the guard, a strategy can re-enter `deposit()` during
+    // the drain, which inflates the measured delta below and mints itself shares
+    // it never paid for.
     // slither-disable-next-line reentrancy-no-eth
-    function setStrategy(address newStrategy) external onlyOwner {
+    function setStrategy(address newStrategy) external onlyOwner nonReentrant {
         if (newStrategy == address(0)) revert ZeroAddress();
 
         address oldStrategy = strategy;
@@ -310,7 +322,11 @@ contract Vault is ERC4626, Ownable, ReentrancyGuard {
      */
     // Measuring the balance across the call is deliberate: the vault trusts the
     // delta it observes, not what the owner-set strategy reports, and reverts
-    // unless the delta covers `amount`.
+    // unless the delta covers `amount`. That invariant only holds while the
+    // strategy cannot move the vault's balance from inside the call, so every
+    // caller of this function is `nonReentrant`: `withdraw`, `redeem`,
+    // `allocateToStrategy` and `setStrategy`. Dropping the guard from any of
+    // them makes the delta forgeable and this comment false.
     // slither-disable-next-line reentrancy-balance,reentrancy-no-eth
     function _withdrawFromStrategy(uint256 amount) internal {
         if (strategy == address(0)) revert ZeroAddress();

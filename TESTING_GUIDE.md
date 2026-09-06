@@ -158,7 +158,7 @@ npx hardhat test test/unit/Vault.test.ts --grep "Deposits"
       ✓ Should allow users to deposit USDC (XXms)
       ... (more tests)
 
-  87 passing (XXs)
+  88 passing (XXs)
 ```
 
 **Reading the results:**
@@ -389,7 +389,7 @@ npm run compile
 
 # ✅ Tests
 npm test
-# All must pass (87/87)
+# All must pass (88/88)
 
 # ✅ Coverage
 npm run coverage
