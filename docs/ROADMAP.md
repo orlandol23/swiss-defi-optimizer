@@ -137,3 +137,37 @@ timelock is ever wanted, it goes through an ADR first.
 3. Every conformance rule is pinned by a test and explained by the bug that
    produced it.
 4. Security fixes never relax a gate in the same commit.
+
+## Second review, 2026-09-07: beyond the audit
+
+1. **Upgradeability, as a decision.** Immutable versus proxy is not recorded
+   anywhere. Immutable is the right call for this repository; write
+   `docs/adr/0002-immutable-vault.md` so a reviewer sees a decision and not
+   an absence. (Phase 3's first-depositor ADR becomes 0001.)
+2. **A review checklist as a gate.** The sibling repositories carry a
+   `SOLIDITY_REVIEW_CHECKLIST.md` that every contract PR goes through. Adopt
+   it here before Phase 1 lands.
+3. **If `harvest()` becomes real (Phase 2), its timing is MEV-exposed:** a
+   sandwich around yield realisation. Decide then between permissionless
+   harvest with an incentive and a documented exposure, or keeper-only. Not
+   before Phase 2; not silently either.
+4. **An economic review page.** One page in `docs/` listing the vectors
+   considered (donation attack, rounding direction on each entry point,
+   `totalAssets` manipulation by direct transfer, the zero-shares deposit that
+   PR #7 closed) and, for each, the test that covers it or the line that
+   declares it out of scope. Reviewers of vaults read this page first.
+
+### Repository hygiene (shared by all six repositories)
+
+- **Dependency update automation.** None of the six repositories has Dependabot
+  or Renovate. Add `.github/dependabot.yml` with weekly, grouped updates for the
+  package ecosystem and for `github-actions`, and daily security updates. The
+  recurring "npm audit fix without --force" items stop recurring once this
+  exists.
+- **Responsible disclosure.** No repository has a `SECURITY.md`. Enable GitHub
+  private vulnerability reporting (Settings > Security > "Private vulnerability
+  reporting") and add a `SECURITY.md` that points to it, so a report never has
+  to be a public issue. Do not put a personal email address in the file.
+- **Branch protection on the default branch.** Require the CI checks to pass
+  before merge; forbid force-push and deletion. An owner setting; costs nothing
+  and is the first thing a reviewer checks after the README.
