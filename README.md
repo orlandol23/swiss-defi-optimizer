@@ -180,6 +180,10 @@ Things the contracts do today that the names alone do not tell you.
 
 ## Possible future work (not implemented)
 
+What to build, in what order, and why is in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+The September 2026 audit, with the status of every finding, is in
+[`docs/AUDIT-2026-09.md`](docs/AUDIT-2026-09.md).
+
 - Frontend (wallet + dashboard) — **does not exist in this repository**
 - Integration with real yield protocols (Aave/Compound/Curve)
 - Dedicated integration and security tests

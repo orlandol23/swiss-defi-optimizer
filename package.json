@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://local_proxy@127.0.0.1:27967/git/orlandol23/swiss-defi-optimizer"
+    "url": "git+https://github.com/orlandol23/swiss-defi-optimizer.git"
   },
   "keywords": [],
   "author": "",
