@@ -20,6 +20,8 @@ The project focuses on the **contract code and its tests**, as a DeFi/Solidity s
 
 > ⚠️ Scope: this repository contains **the contracts only**. There is no frontend, no wallet
 > integration and no integration with external protocols (Aave/Compound/Curve) — see "Possible future work".
+> There is no public deployment either: `deployments/` is empty and no contract address of
+> this project is published anywhere. **Do not use with real funds.**
 
 ## Contracts
 
@@ -55,7 +57,8 @@ The project focuses on the **contract code and its tests**, as a DeFi/Solidity s
 - **KYC/AML:** simulated checks
 
 > ⚠️ This module is a **simplified mock** for demonstration purposes. It does not constitute tax
-> advice. Consult a professional for real compliance.
+> advice, and it is not a FINMA approval, licence or endorsement — the Swiss/FINMA compliance
+> angle here is demonstrative only. Consult a professional for real compliance.
 
 > ⚠️ **Not wired into the vault.** `SwissCompliance` is a standalone contract. `Vault.sol` never
 > calls it, and no deposit or withdrawal is gated on compliance — the deploy script simply deploys

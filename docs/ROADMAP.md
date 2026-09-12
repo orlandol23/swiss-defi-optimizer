@@ -14,7 +14,9 @@ definition of done so a phase can be closed with confidence.
 Contracts only, Hardhat, 88 tests. An ERC-4626 vault over USDC with a single
 strategy slot, emergency shutdown, and conformance rules that were earned from
 two real bugs and are pinned by tests. A mock Swiss compliance contract for
-demonstration. A Chainlink price conversion library.
+demonstration. A Chainlink price conversion library. Nothing is deployed —
+`deployments/` holds only a `.gitkeep` — and no public deployment is claimed.
+The contracts are not for use with real funds.
 
 The README's "Known limitations" and "Possible future work" are accurate and
 stay the source of truth for what does not exist. This file says what to build
@@ -144,9 +146,12 @@ timelock is ever wanted, it goes through an ADR first.
    anywhere. Immutable is the right call for this repository; write
    `docs/adr/0002-immutable-vault.md` so a reviewer sees a decision and not
    an absence. (Phase 3's first-depositor ADR becomes 0001.)
-2. **A review checklist as a gate.** The sibling repositories carry a
-   `SOLIDITY_REVIEW_CHECKLIST.md` that every contract PR goes through. Adopt
-   it here before Phase 1 lands.
+2. **A review checklist as a gate.** The sibling repositories of the September
+   2026 audit pass carry a `SOLIDITY_REVIEW_CHECKLIST.md` that every contract
+   PR goes through. That pass and its repositories are external context (see
+   [`AUDIT-2026-09.md`](AUDIT-2026-09.md)), not evidence about this
+   repository; the proposal here is to adopt a checklist of our own before
+   Phase 1 lands.
 3. **If `harvest()` becomes real (Phase 2), its timing is MEV-exposed:** a
    sandwich around yield realisation. Decide then between permissionless
    harvest with an incentive and a documented exposure, or keeper-only. Not
@@ -157,14 +162,22 @@ timelock is ever wanted, it goes through an ADR first.
    PR #7 closed) and, for each, the test that covers it or the line that
    declares it out of scope. Reviewers of vaults read this page first.
 
-### Repository hygiene (shared by all six repositories)
+### Repository hygiene (external context: the September 2026 audit pass)
 
-- **Dependency update automation.** None of the six repositories has Dependabot
-  or Renovate. Add `.github/dependabot.yml` with weekly, grouped updates for the
+The gaps below were found in every repository of that pass, including this
+one. The pass itself is external context (see
+[`AUDIT-2026-09.md`](AUDIT-2026-09.md)); claims about the sibling
+repositories cannot be verified from this repository. The actions here are
+about this repository and stand on their own.
+
+- **Dependency update automation.** None of the six repositories of the pass
+  had Dependabot or Renovate, and this repository has neither. Add
+  `.github/dependabot.yml` with weekly, grouped updates for the
   package ecosystem and for `github-actions`, and daily security updates. The
   recurring "npm audit fix without --force" items stop recurring once this
   exists.
-- **Responsible disclosure.** No repository has a `SECURITY.md`. Enable GitHub
+- **Responsible disclosure.** No repository of the pass has a `SECURITY.md`,
+  and this repository has none. Enable GitHub
   private vulnerability reporting (Settings > Security > "Private vulnerability
   reporting") and add a `SECURITY.md` that points to it, so a report never has
   to be a public issue. Do not put a personal email address in the file.
