@@ -77,3 +77,11 @@ violated:
 Never name a state variable after a standard ERC-4626 function — the generated
 zero-argument getter shadows the standard entry point and integrators read the
 wrong value.
+
+## Plans and audits
+
+- The plan is `docs/ROADMAP.md`. Nothing in it is ticked by intention: a box
+  closes in the PR that closes it, with the PR linked.
+- `docs/AUDIT-2026-09.md` is the September 2026 security and architecture
+  audit with the status of every finding. A status changes only in the PR that
+  changes the code. Later reviews go in a new dated file, never merged into it.
