@@ -1,0 +1,16 @@
+:root {
+  --canvas: #f5f5f3;
+  --surface: #ffffff;
+  --surface-strong: #eae9e5;
+  --ink: #171a1f;
+  --ink-muted: #5e6773;
+  --rule: #d8d7d2;
+  --rule-strong: #b8b5ae;
+  --info: #2f5f9f;
+  --warning: #8a4f00;
+  --danger: #b42318;
+  --focus: #2557d6;
+  --radius-tight: 2px;
+  --radius-control: 4px;
+  --radius-panel: 8px;
+}
