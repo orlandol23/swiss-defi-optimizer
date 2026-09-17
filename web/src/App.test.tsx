@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { errorState, staleState, unavailableState } from './data/test-states';
 import { RegisterTable } from './components/RegisterTable';
@@ -7,6 +7,8 @@ import { RegisterTable } from './components/RegisterTable';
 describe('Vault State Register preview', () => {
   it('renders the risk strip and explicit preview warnings', () => {
     render(<App />);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('main', { name: 'Vault State Register' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Risk status' })).toBeInTheDocument();
     expect(screen.getByText('PREVIEW ONLY')).toBeInTheDocument();
     expect(screen.getByText('NO DEPLOYMENT VERIFIED')).toBeInTheDocument();
@@ -72,5 +74,24 @@ describe('Vault State Register preview', () => {
     expect(screen.getByText('Source: fixture / Stale')).toBeInTheDocument();
     expect(screen.getByText('Old preview value')).toBeInTheDocument();
     expect(screen.queryByText('Source: fixture / available')).not.toBeInTheDocument();
+  });
+
+  it('keeps all fixture availability states explicit in text', () => {
+    render(<RegisterTable fields={[
+      { label: 'Unavailable field', field: unavailableState },
+      { label: 'Error field', field: errorState },
+      { label: 'Stale field', field: staleState },
+    ]} />);
+    expect(screen.getByText('Source: fixture / Not available')).toBeInTheDocument();
+    expect(screen.getByText('Source: fixture / Error')).toBeInTheDocument();
+    expect(screen.getByText('Source: fixture / Stale')).toBeInTheDocument();
+  });
+
+  it('does not expose prohibited operational claims or make requests', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    render(<App />);
+    expect(screen.queryByText(/secure with real funds|protected assets|best apy|live tvl|tax-ready|optimizer functional|trusted defi infrastructure|next-generation yield|secure and compliant|built for everyone/i)).not.toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

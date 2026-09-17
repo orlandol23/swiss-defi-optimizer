@@ -34,7 +34,7 @@ export function RegisterTable({ fields }: RegisterTableProps) {
           <dt className="register-label">{label}</dt>
           <dd className={`register-value is-${field.availability}`}>
             <span>{displayValue(field.value)}</span>
-            <span className="field-provenance" aria-label={`${label} source and availability`}>
+            <span className="field-provenance">
               Source: {field.source} / {availabilityLabel(field.availability)}
             </span>
             {field.note && <span className="field-note">{field.note}</span>}

@@ -14,10 +14,10 @@ export function App() {
     <div className="app-shell">
       <Masthead />
       <RiskStrip />
-      <main>
+      <main aria-labelledby="register-title">
         <div className="register-lede">
           <p className="eyebrow">Register / 00</p>
-          <h2>Vault State Register</h2>
+          <h2 id="register-title">Vault State Register</h2>
           <p>Read-only presentation of the current contract study and its known limits.</p>
         </div>
         <div className="panel-grid">

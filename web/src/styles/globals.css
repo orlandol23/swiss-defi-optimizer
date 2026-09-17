@@ -68,7 +68,7 @@ h1 { max-width: 650px; margin-bottom: 0; font-size: clamp(2rem, 5vw, 4.8rem); li
   .section-heading h2 { font-size: 1rem; }
   .register-row { display: block; min-height: 0; padding: 12px 0; }
   .register-label { margin-bottom: 6px; }
-  .register-value { overflow-wrap: normal; word-break: normal; }
+  .register-value { word-break: normal; }
   .note-list, .method-notes { grid-template-columns: 1fr; }
   .method-notes .section-heading { grid-column: auto; }
 }
