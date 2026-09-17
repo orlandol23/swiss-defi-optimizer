@@ -33,11 +33,13 @@ h1 { max-width: 650px; margin-bottom: 0; font-size: clamp(2rem, 5vw, 4.8rem); li
 .section-index { color: var(--info); font-size: 0.68rem; }
 .section-heading h2 { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 1.1rem; font-weight: 650; letter-spacing: 0.01em; text-transform: uppercase; }
 .section-intro { min-height: 44px; margin-bottom: 20px; color: var(--ink-muted); font-size: 0.9rem; }
-.register-table { border-top: 1px solid var(--rule); }
+.register-table { margin: 0; border-top: 1px solid var(--rule); }
 .register-row { display: grid; grid-template-columns: minmax(130px, 0.8fr) 1.2fr; gap: 16px; min-height: 48px; align-items: center; border-bottom: 1px solid var(--rule); }
 .register-label { color: var(--ink-muted); font-size: 0.72rem; }
-.register-value { overflow-wrap: anywhere; font-size: 0.82rem; }
-.register-value.is-unverified { color: var(--warning); }
+.register-value { display: grid; gap: 3px; min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 0.82rem; }
+.register-value.is-not-verified, .register-value.is-stale, .register-value.is-error { color: var(--warning); }
+.register-value.is-error { color: var(--danger); }
+.field-provenance, .field-note { color: var(--ink-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.65rem; line-height: 1.35; }
 .note-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin: 0; padding: 0; list-style: none; }
 .note-list li { display: grid; gap: 8px; align-content: start; padding-top: 12px; border-top: 2px solid var(--rule-strong); font-size: 0.9rem; }
 .note-key { color: var(--ink-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.72rem; text-transform: uppercase; }
@@ -45,6 +47,7 @@ h1 { max-width: 650px; margin-bottom: 0; font-size: clamp(2rem, 5vw, 4.8rem); li
 .compliance-notice .section-heading { margin-bottom: 10px; }
 .compliance-status { margin-bottom: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82rem; }
 .compliance-notice p:last-child { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
+.compliance-notice .field-provenance { margin-top: 12px; }
 .method-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 48px; margin-top: 70px; padding: 24px 0 54px; border-top: 1px solid var(--rule-strong); }
 .method-notes .section-heading { grid-column: 1 / -1; margin-bottom: 0; }
 .method-notes p { margin: 0; color: var(--ink-muted); font-size: 0.86rem; }

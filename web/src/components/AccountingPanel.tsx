@@ -11,6 +11,9 @@ export function AccountingPanel({ state }: { state: PreviewState }) {
         { label: 'Asset model', field: state.assetModel },
         { label: 'Deployment', field: state.deployment },
         { label: 'Environment', field: state.environment },
+        { label: 'Total assets', field: state.totalAssets },
+        { label: 'Total shares', field: state.totalShares },
+        { label: 'Price per share', field: state.pricePerShare },
       ]} />
     </section>
   );
