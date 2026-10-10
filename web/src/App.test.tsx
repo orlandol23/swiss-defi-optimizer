@@ -8,7 +8,7 @@ describe('Vault State Register preview', () => {
   it('renders the risk strip and explicit preview warnings', () => {
     render(<App />);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('main', { name: 'Vault State Register' })).toBeInTheDocument();
+    expect(screen.getByRole('main', { name: 'Contract state' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Risk status' })).toBeInTheDocument();
     expect(screen.getByText('PREVIEW ONLY')).toBeInTheDocument();
     expect(screen.getByText('NO DEPLOYMENT VERIFIED')).toBeInTheDocument();
